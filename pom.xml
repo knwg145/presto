@@ -137,6 +137,7 @@
         <module>presto-elasticsearch</module>
         <module>presto-iceberg</module>
         <module>presto-google-sheets</module>
+        <module>presto-deprecated-warnings-manager</module>
     </modules>
 
     <dependencyManagement>
@@ -465,6 +466,19 @@
                 <artifactId>presto-thrift</artifactId>
                 <version>${project.version}</version>
                 <type>zip</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.prestosql</groupId>
+                <artifactId>presto-deprecated-warnings-manager</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.prestosql</groupId>
+                <artifactId>presto-deprecated-warnings-manager</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
 
             <dependency>

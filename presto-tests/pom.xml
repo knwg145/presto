@@ -48,6 +48,19 @@
         </dependency>
 
         <dependency>
+            <groupId>io.prestosql</groupId>
+            <artifactId>presto-deprecated-warnings-manager</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.prestosql</groupId>
+            <artifactId>presto-deprecated-warnings-manager</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>bootstrap</artifactId>
         </dependency>

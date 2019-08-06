@@ -13,6 +13,7 @@
  */
 package io.prestosql.execution;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -33,6 +34,7 @@ import io.prestosql.execution.scheduler.ExecutionPolicy;
 import io.prestosql.execution.scheduler.NodeScheduler;
 import io.prestosql.execution.scheduler.SplitSchedulerStats;
 import io.prestosql.execution.scheduler.SqlQueryScheduler;
+import io.prestosql.execution.warnings.InternalDeprecatedWarningsManager;
 import io.prestosql.execution.warnings.WarningCollector;
 import io.prestosql.failuredetector.FailureDetector;
 import io.prestosql.memory.VersionedMemoryPoolId;
@@ -42,6 +44,7 @@ import io.prestosql.operator.ForScheduler;
 import io.prestosql.security.AccessControl;
 import io.prestosql.server.BasicQueryInfo;
 import io.prestosql.spi.PrestoException;
+import io.prestosql.spi.PrestoWarning;
 import io.prestosql.spi.QueryId;
 import io.prestosql.spi.connector.ConnectorTableHandle;
 import io.prestosql.split.SplitManager;
@@ -49,6 +52,7 @@ import io.prestosql.split.SplitSource;
 import io.prestosql.sql.analyzer.Analysis;
 import io.prestosql.sql.analyzer.Analyzer;
 import io.prestosql.sql.analyzer.QueryExplainer;
+import io.prestosql.sql.deprecatedwarnings.DeprecatedWarningContext;
 import io.prestosql.sql.parser.SqlParser;
 import io.prestosql.sql.planner.DistributedExecutionPlanner;
 import io.prestosql.sql.planner.InputExtractor;
@@ -121,6 +125,7 @@ public class SqlQueryExecution
     private final Analysis analysis;
     private final StatsCalculator statsCalculator;
     private final CostCalculator costCalculator;
+    private final InternalDeprecatedWarningsManager internalDeprecatedWarningsManager;
 
     private SqlQueryExecution(
             PreparedQuery preparedQuery,
@@ -146,7 +151,8 @@ public class SqlQueryExecution
             SplitSchedulerStats schedulerStats,
             StatsCalculator statsCalculator,
             CostCalculator costCalculator,
-            WarningCollector warningCollector)
+            WarningCollector warningCollector,
+            InternalDeprecatedWarningsManager internalDeprecatedWarningsManager)
     {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
             this.slug = requireNonNull(slug, "slug is null");
@@ -166,6 +172,7 @@ public class SqlQueryExecution
             this.schedulerStats = requireNonNull(schedulerStats, "schedulerStats is null");
             this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
             this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
+            this.internalDeprecatedWarningsManager = requireNonNull(internalDeprecatedWarningsManager, "internalDeprecatedWarningsManager is null");
 
             checkArgument(scheduleSplitBatchSize > 0, "scheduleSplitBatchSize must be greater than 0");
             this.scheduleSplitBatchSize = scheduleSplitBatchSize;
@@ -327,6 +334,10 @@ public class SqlQueryExecution
                     return;
                 }
 
+                List<PrestoWarning> deprecatedWarnings =
+                        internalDeprecatedWarningsManager.getDeprecatedWarnings(createDeprecatedWarningContext(analysis, getSession()));
+                deprecatedWarnings.forEach(stateMachine.getWarningCollector()::add);
+
                 // if query is not finished, start the scheduler, otherwise cancel it
                 SqlQueryScheduler scheduler = queryScheduler.get();
 
@@ -339,6 +350,17 @@ public class SqlQueryExecution
                 throwIfInstanceOf(e, Error.class);
             }
         }
+    }
+
+    private DeprecatedWarningContext createDeprecatedWarningContext(Analysis analysis, Session session)
+    {
+        return new DeprecatedWarningContext(
+                session.getCatalog(),
+                session.getSchema(),
+                analysis.getTablesFromNodes(),
+                ImmutableList.copyOf(analysis.getFunctionSignature().values()),
+                session.getSystemProperties(),
+                analysis.getViews());
     }
 
     @Override
@@ -647,6 +669,7 @@ public class SqlQueryExecution
         private final Map<String, ExecutionPolicy> executionPolicies;
         private final StatsCalculator statsCalculator;
         private final CostCalculator costCalculator;
+        private final InternalDeprecatedWarningsManager internalDeprecatedWarningsManager;
 
         @Inject
         SqlQueryExecutionFactory(QueryManagerConfig config,
@@ -668,7 +691,8 @@ public class SqlQueryExecution
                 Map<String, ExecutionPolicy> executionPolicies,
                 SplitSchedulerStats schedulerStats,
                 StatsCalculator statsCalculator,
-                CostCalculator costCalculator)
+                CostCalculator costCalculator,
+                InternalDeprecatedWarningsManager internalDeprecatedWarningsManager)
         {
             requireNonNull(config, "config is null");
             this.schedulerStats = requireNonNull(schedulerStats, "schedulerStats is null");
@@ -691,6 +715,7 @@ public class SqlQueryExecution
             this.planOptimizers = requireNonNull(planOptimizers, "planOptimizers is null").get();
             this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
             this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
+            this.internalDeprecatedWarningsManager = requireNonNull(internalDeprecatedWarningsManager, "internalDeprecatedWarningsManager is null");
         }
 
         @Override
@@ -728,7 +753,8 @@ public class SqlQueryExecution
                     schedulerStats,
                     statsCalculator,
                     costCalculator,
-                    warningCollector);
+                    warningCollector,
+                    internalDeprecatedWarningsManager);
         }
     }
 }
