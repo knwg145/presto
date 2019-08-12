@@ -13,52 +13,35 @@
  */
 package io.prestosql.sql.deprecatedwarnings;
 
+import io.prestosql.metadata.QualifiedObjectName;
 import io.prestosql.metadata.Signature;
-import io.prestosql.sql.tree.Table;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
 public final class DeprecatedWarningContext
 {
-    private final Optional<String> catalog;
-    private final Optional<String> schema;
-    private final List<Table> tables;
+    private final List<QualifiedObjectName> tables;
     private final List<Signature> functionSignatures;
     private final Map<String, String> systemProperties;
-    private final Set<Table> views;
+    private final Set<QualifiedObjectName> views;
 
     public DeprecatedWarningContext(
-            Optional<String> catalog,
-            Optional<String> schema,
-            List<Table> tables,
+            List<QualifiedObjectName> tables,
             List<Signature> functionSignatures,
             Map<String, String> systemProperties,
-            Set<Table> views)
+            Set<QualifiedObjectName> views)
     {
-        this.catalog = requireNonNull(catalog, "catalog is null");
-        this.schema = requireNonNull(schema, "schema is null");
         this.tables = requireNonNull(tables, "tables is null");
         this.functionSignatures = requireNonNull(functionSignatures, "functionSignatures is null");
         this.systemProperties = requireNonNull(systemProperties, "systemProperties is null");
         this.views = requireNonNull(views, "views is null");
     }
 
-    public Optional<String> getCatalog()
-    {
-        return catalog;
-    }
-
-    public Optional<String> getSchema()
-    {
-        return schema;
-    }
-
-    public List<Table> getTables()
+    public List<QualifiedObjectName> getTables()
     {
         return tables;
     }
@@ -73,7 +56,7 @@ public final class DeprecatedWarningContext
         return systemProperties;
     }
 
-    public Set<Table> getViews()
+    public Set<QualifiedObjectName> getViews()
     {
         return views;
     }

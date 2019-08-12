@@ -84,7 +84,7 @@ public class Analysis
     private String updateType;
 
     private final Map<NodeRef<Table>, Query> namedQueries = new LinkedHashMap<>();
-    private final Set<Table> views = new HashSet<>();
+    private final Set<QualifiedObjectName> views = new HashSet<>();
     private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
     private final Map<NodeRef<Expression>, FieldId> columnReferences = new LinkedHashMap<>();
 
@@ -487,7 +487,7 @@ public class Analysis
         tables.put(NodeRef.of(table), handle);
     }
 
-    public void registerView(Table tableReference)
+    public void registerView(QualifiedObjectName tableReference)
     {
         requireNonNull(tableReference, "tableReference is null");
         views.add(tableReference);
@@ -719,14 +719,9 @@ public class Analysis
         return ImmutableMap.copyOf(functionSignature);
     }
 
-    public Set<Table> getViews()
+    public Set<QualifiedObjectName> getViews()
     {
         return ImmutableSet.copyOf(views);
-    }
-
-    public List<Table> getTablesFromNodes()
-    {
-        return tables.keySet().stream().map(node -> node.getNode()).collect(ImmutableList.toImmutableList());
     }
 
     @Immutable

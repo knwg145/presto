@@ -11,15 +11,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.prestosql.spi.deprecatedwarnings;
+
+package io.prestosql.execution.warnings;
+
+import com.google.common.collect.ImmutableList;
+import io.prestosql.spi.PrestoWarning;
 
 import java.util.List;
 
-public interface DeprecatedWarningsConfigurationManager
+public interface QueryPhaseWarningCollector
 {
-    List<DeprecatedWarningMessage> getTableDeprecatedInfo(String catalog, String schema, String tableName);
+    QueryPhaseWarningCollector NOOP = new QueryPhaseWarningCollector() {
+        @Override
+        public void add(PrestoWarning warning) {}
 
-    List<DeprecatedWarningMessage> getUDFDeprecatedInfo(String udfName, String arguments, String returnType);
+        @Override
+        public List<PrestoWarning> getWarnings()
+        {
+            return ImmutableList.of();
+        }
+    };
 
-    List<DeprecatedWarningMessage> getSessionPropertyDeprecatedInfo(String sessionPropertyName, String value);
+    void add(PrestoWarning warning);
+
+    List<PrestoWarning> getWarnings();
 }

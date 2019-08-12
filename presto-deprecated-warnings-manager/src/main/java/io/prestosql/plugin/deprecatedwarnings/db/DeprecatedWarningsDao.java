@@ -16,7 +16,6 @@ package io.prestosql.plugin.deprecatedwarnings.db;
 import io.prestosql.plugin.deprecatedwarnings.SessionPropertyWarningInfo;
 import io.prestosql.plugin.deprecatedwarnings.TableWarningInfo;
 import io.prestosql.plugin.deprecatedwarnings.UDFWarningInfo;
-import io.prestosql.plugin.deprecatedwarnings.ViewWarningInfo;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jdbi.v3.sqlobject.statement.UseRowMapper;
@@ -68,16 +67,6 @@ public interface DeprecatedWarningsDao
             ")\n")
     void createSessionPropertyWarningsTable();
 
-    @SqlUpdate("CREATE TABLE IF NOT EXISTS viewWarnings (\n" +
-            "viewWarningId BIGINT NOT NULL AUTO_INCREMENT,\n" +
-            "view VARCHAR(512),\n" +
-            "grid VARCHAR(512),\n" +
-            "warningId BIGINT,\n" +
-            "FOREIGN KEY(warningId) REFERENCES warnings(warningId),\n" +
-            "PRIMARY KEY (viewWarningId)\n" +
-            ")\n")
-    void createViewWarningsTable();
-
     @SqlQuery(
             "SELECT " +
             "a.catalogName," +
@@ -125,20 +114,6 @@ public interface DeprecatedWarningsDao
     @UseRowMapper(SessionPropertyWarningInfo.Mapper.class)
     List<SessionPropertyWarningInfo> getSessionPropertyWarnings();
 
-    @SqlQuery(
-            "SELECT " +
-            "a.view," +
-            "a.grid, " +
-            "b.warningMessage, " +
-            "b.jiraLink " +
-            "FROM " +
-            "viewWarnings a " +
-            "JOIN " +
-            "warnings b " +
-            "on a.warningId = b.warningId; ")
-    @UseRowMapper(ViewWarningInfo.Mapper.class)
-    List<ViewWarningInfo> getViewWarnings();
-
     @SqlUpdate("DROP TABLE IF EXISTS warnings")
     void dropWarningsTable();
 
@@ -150,7 +125,4 @@ public interface DeprecatedWarningsDao
 
     @SqlUpdate("DROP TABLE IF EXISTS sessionPropertyWarnings")
     void dropSessionPropertyWarningsTable();
-
-    @SqlUpdate("DROP TABLE IF EXISTS viewWarnings")
-    void dropViewWarningsTable();
 }

@@ -20,7 +20,6 @@ import io.prestosql.plugin.deprecatedwarnings.DeprecatedWarningInfo;
 import io.prestosql.plugin.deprecatedwarnings.SessionPropertyWarningInfo;
 import io.prestosql.plugin.deprecatedwarnings.TableWarningInfo;
 import io.prestosql.plugin.deprecatedwarnings.UDFWarningInfo;
-import io.prestosql.plugin.deprecatedwarnings.ViewWarningInfo;
 import io.prestosql.spi.connector.StandardWarningCode;
 import io.prestosql.spi.deprecatedwarnings.DeprecatedWarningMessage;
 import io.prestosql.spi.deprecatedwarnings.DeprecatedWarningsConfigurationManager;
@@ -39,7 +38,6 @@ import java.util.Optional;
 import static io.prestosql.spi.connector.StandardWarningCode.SESSION_DEPRECATED_WARNINGS;
 import static io.prestosql.spi.connector.StandardWarningCode.TABLE_DEPRECATED_WARNINGS;
 import static io.prestosql.spi.connector.StandardWarningCode.UDF_DEPRECATED_WARNINGS;
-import static io.prestosql.spi.connector.StandardWarningCode.VIEW_DEPRECATED_WARNINGS;
 import static java.util.Objects.requireNonNull;
 
 public class DbDeprecatedWarningsManager
@@ -51,7 +49,6 @@ public class DbDeprecatedWarningsManager
     private final CounterStat tableWarningsDbLoadFailuresCounter = new CounterStat();
     private final CounterStat udfWarningsDbLoadFailuresCounter = new CounterStat();
     private final CounterStat sessionPropertyWarningsDbLoadFailuresCounter = new CounterStat();
-    private final CounterStat viewWarningsDbLoadFailuresCounter = new CounterStat();
     private final String grid;
 
     @Inject
@@ -78,7 +75,6 @@ public class DbDeprecatedWarningsManager
         dao.createTableWarningsTable();
         dao.createUDFWarningsTable();
         dao.createSessionPropertyWarningsTable();
-        dao.createViewWarningsTable();
         warningsProvider.initialize(this::loadWarnings);
     }
 
@@ -139,25 +135,6 @@ public class DbDeprecatedWarningsManager
         return allMessages.build();
     }
 
-    @Override
-    public List<DeprecatedWarningMessage> getViewDeprecatedInfo(String viewName)
-    {
-        Map<StandardWarningCode, List<? extends DeprecatedWarningInfo>> warningsInfo = warningsProvider.get();
-        if (!warningsInfo.containsKey(VIEW_DEPRECATED_WARNINGS)) {
-            log.error("Does not contain viewWarnings");
-            return ImmutableList.of();
-        }
-        ImmutableList.Builder<DeprecatedWarningMessage> allMessages = new ImmutableList.Builder<>();
-        for (DeprecatedWarningInfo deprecatedWarningDbInfo : warningsInfo.get(VIEW_DEPRECATED_WARNINGS)) {
-            ViewWarningInfo viewWarningDbInfo = (ViewWarningInfo) deprecatedWarningDbInfo;
-            Optional<DeprecatedWarningMessage> deprecatedDbInfo = viewWarningDbInfo.match(viewName, grid);
-            if (deprecatedDbInfo.isPresent()) {
-                allMessages.add(deprecatedDbInfo.get());
-            }
-        }
-        return allMessages.build();
-    }
-
     public Map<StandardWarningCode, List<? extends DeprecatedWarningInfo>> loadWarnings()
     {
         Map<StandardWarningCode, List<? extends DeprecatedWarningInfo>> deprecatedWarningsMapping = new HashMap<>();
@@ -182,13 +159,6 @@ public class DbDeprecatedWarningsManager
             sessionPropertyWarningsDbLoadFailuresCounter.update(1);
             log.error("Error loading sessionPropertyWarnings");
         }
-        try {
-            deprecatedWarningsMapping.put(VIEW_DEPRECATED_WARNINGS, dao.getViewWarnings());
-        }
-        catch (Exception e) {
-            viewWarningsDbLoadFailuresCounter.update(1);
-            log.error("Error loading viewWarnings");
-        }
         return deprecatedWarningsMapping;
     }
 
@@ -211,12 +181,5 @@ public class DbDeprecatedWarningsManager
     public CounterStat getSessionPropertyWarningsDbLoadFailuresCounter()
     {
         return sessionPropertyWarningsDbLoadFailuresCounter;
-    }
-
-    @Managed
-    @Nested
-    public CounterStat getViewWarningsDbLoadFailuresCounter()
-    {
-        return viewWarningsDbLoadFailuresCounter;
     }
 }

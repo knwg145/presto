@@ -57,7 +57,6 @@ import io.prestosql.execution.scheduler.NetworkTopology;
 import io.prestosql.execution.scheduler.NodeScheduler;
 import io.prestosql.execution.scheduler.NodeSchedulerConfig;
 import io.prestosql.execution.scheduler.NodeSchedulerExporter;
-import io.prestosql.execution.warnings.InternalDeprecatedWarningsManager;
 import io.prestosql.index.IndexManager;
 import io.prestosql.memory.LocalMemoryManager;
 import io.prestosql.memory.LocalMemoryManagerExporter;
@@ -209,9 +208,6 @@ public class ServerMainModule
         binder.bind(SessionPropertyManager.class).in(Scopes.SINGLETON);
         binder.bind(SystemSessionProperties.class).in(Scopes.SINGLETON);
         binder.bind(SessionPropertyDefaults.class).in(Scopes.SINGLETON);
-
-        //deprecated warnings
-        binder.bind(InternalDeprecatedWarningsManager.class).in(Scopes.SINGLETON);
 
         // schema properties
         binder.bind(SchemaPropertyManager.class).in(Scopes.SINGLETON);

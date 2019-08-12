@@ -925,7 +925,8 @@ class StatementAnalyzer
 
             Query query = parseView(view.getOriginalSql(), name, table);
             analysis.registerNamedQuery(table, query);
-            analysis.registerView(table);
+            analysis.registerView(name);
+            analysis.registerView(name);
             analysis.registerTableForView(table);
             RelationType descriptor = analyzeView(query, name, view.getCatalog(), view.getSchema(), view.getOwner(), table);
             analysis.unregisterTableForView();

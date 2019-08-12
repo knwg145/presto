@@ -22,12 +22,11 @@ import com.google.inject.Scopes;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.json.JsonModule;
 import io.prestosql.Session;
-import io.prestosql.connector.CatalogName;
 import io.prestosql.execution.warnings.InternalDeprecatedWarningsManager;
 import io.prestosql.metadata.FunctionKind;
+import io.prestosql.metadata.QualifiedObjectName;
 import io.prestosql.metadata.SessionPropertyManager;
 import io.prestosql.metadata.Signature;
-import io.prestosql.metadata.TableHandle;
 import io.prestosql.plugin.deprecatedwarnings.H2DeprecatedWarningsDao;
 import io.prestosql.plugin.deprecatedwarnings.H2DeprecatedWarningsDaoProvider;
 import io.prestosql.plugin.deprecatedwarnings.TestingDbDeprecatedWarningsProvider;
@@ -36,26 +35,22 @@ import io.prestosql.plugin.deprecatedwarnings.db.DbDeprecatedWarningsManagerConf
 import io.prestosql.plugin.deprecatedwarnings.db.DbDeprecatedWarningsProvider;
 import io.prestosql.plugin.deprecatedwarnings.db.DeprecatedWarningsDao;
 import io.prestosql.plugin.deprecatedwarnings.db.ForGrid;
-import io.prestosql.plugin.tpch.TpchTableHandle;
+import io.prestosql.security.AccessControl;
+import io.prestosql.security.AllowAllAccessControl;
 import io.prestosql.server.testing.TestingPrestoServer;
 import io.prestosql.spi.Plugin;
 import io.prestosql.spi.PrestoWarning;
 import io.prestosql.spi.QueryId;
-import io.prestosql.spi.connector.ConnectorTableHandle;
-import io.prestosql.spi.connector.ConnectorTransactionHandle;
 import io.prestosql.spi.deprecatedwarnings.DeprecatedWarningsConfigurationManager;
 import io.prestosql.spi.deprecatedwarnings.DeprecatedWarningsConfigurationManagerContext;
 import io.prestosql.spi.deprecatedwarnings.DeprecatedWarningsConfigurationManagerFactory;
-import io.prestosql.spi.predicate.TupleDomain;
 import io.prestosql.spi.security.Identity;
 import io.prestosql.spi.type.TypeSignature;
 import io.prestosql.sql.analyzer.Analysis;
 import io.prestosql.sql.deprecatedwarnings.DeprecatedWarningContext;
-import io.prestosql.sql.planner.TestingConnectorTransactionHandle;
 import io.prestosql.sql.tree.FunctionCall;
 import io.prestosql.sql.tree.NodeRef;
 import io.prestosql.sql.tree.QualifiedName;
-import io.prestosql.sql.tree.Table;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -67,6 +62,9 @@ import java.util.Optional;
 
 import static com.google.common.base.Throwables.throwIfUnchecked;
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.prestosql.spi.connector.StandardWarningCode.SESSION_DEPRECATED_WARNINGS;
+import static io.prestosql.spi.connector.StandardWarningCode.TABLE_DEPRECATED_WARNINGS;
+import static io.prestosql.spi.connector.StandardWarningCode.UDF_DEPRECATED_WARNINGS;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.weakref.jmx.guice.ExportBinder.newExporter;
@@ -109,30 +107,25 @@ public class TestDbDeprecatedWarnings
         dao.dropTableWarningsTable();
         dao.dropSessionPropertyWarningsTable();
         dao.dropUDFWarningsTable();
-        dao.dropViewWarningsTable();
 
         dao.createWarningsTable();
         dao.createTableWarningsTable();
         dao.createSessionPropertyWarningsTable();
         dao.createUDFWarningsTable();
-        dao.createViewWarningsTable();
 
         dao.insertWarnings("testMessage", "jiraLinkTest");
         dao.insertWarnings("testMessage2", "jiraLinkTest2");
         dao.insertTableWarnings("hive", "test", "test", grid, 1);
         dao.insertUDFWarnings("count", "", "bigint", grid, 1);
         dao.insertSessionPropertyWarnings("query_priority", "1", grid, 1);
-        dao.insertViewWarnings("test", grid, 1);
     }
 
     private void setupAnalysis(Analysis analysis)
     {
-        CatalogName catalogName = new CatalogName("hive");
-        ConnectorTableHandle connectorTableHandle = new TpchTableHandle("test", 1.0, TupleDomain.none());
-        ConnectorTransactionHandle connectorTransactionHandle = TestingConnectorTransactionHandle.INSTANCE;
-        TableHandle tableHandle = new TableHandle(catalogName, connectorTableHandle, connectorTransactionHandle, Optional.empty());
-        Table table = new Table(QualifiedName.of("test"));
-        analysis.registerTable(table, tableHandle);
+        Identity identity = new Identity("user", Optional.empty());
+        AccessControl accessControl = new AllowAllAccessControl();
+        QualifiedObjectName tableName = new QualifiedObjectName("hive", "test", "test");
+        analysis.addEmptyColumnReferencesForTable(accessControl, identity, tableName);
 
         Map<NodeRef<FunctionCall>, Signature> functionSignature = new HashMap<>();
         FunctionCall functionCall = new FunctionCall(QualifiedName.of("count"), new ArrayList());
@@ -141,15 +134,19 @@ public class TestDbDeprecatedWarnings
         functionSignature.put(NodeRef.of(functionCall), signature);
         analysis.addFunctionSignatures(functionSignature);
 
-        analysis.registerView(table);
+        analysis.registerView(tableName);
     }
 
     private DeprecatedWarningContext createDeprecatedWarningContext(Analysis analysis, Session session)
     {
         return new DeprecatedWarningContext(
-                session.getCatalog(),
-                session.getSchema(),
-                analysis.getTablesFromNodes(),
+                analysis
+                    .getTableColumnReferences()
+                    .values()
+                    .stream()
+                    .map(qualifiedObjectName -> qualifiedObjectName.keySet())
+                    .flatMap(setOfQualifedObjectNames -> setOfQualifedObjectNames.stream())
+                    .collect(ImmutableList.toImmutableList()),
                 ImmutableList.copyOf(analysis.getFunctionSignature().values()),
                 session.getSystemProperties(),
                 analysis.getViews());
@@ -159,25 +156,27 @@ public class TestDbDeprecatedWarnings
     public void testCombinedDynamicWarnings()
     {
         List<PrestoWarning> warnings = this.internalDeprecatedWarningsManager.getDeprecatedWarnings(createDeprecatedWarningContext(analysis, session));
-        assertWarning(warnings, 262, String.format("The query may have issues because of the following table(s). hive.test.test has the following warning: testMessage : jiraLinkTest in grid %s", grid));
-        assertWarning(warnings, 263, String.format("The query may have issues because of the following UDF(s). UDF: count():bigint has the following warning: testMessage : jiraLinkTest in grid %s", grid));
-        assertWarning(warnings, 264, String.format("The query may have issues because of the following session property(s). Session Property: query_priority has the following warning: testMessage : jiraLinkTest in grid %s", grid));
-        assertWarning(warnings, 265, String.format("The query may have issues because of the following view(s). View: test has the following warning: testMessage : jiraLinkTest in grid %s", grid));
+        List<PrestoWarning> expectedWarnings = ImmutableList.of(
+                new PrestoWarning(TABLE_DEPRECATED_WARNINGS,
+                        "View hive.test.test has the following warning: testMessage : jiraLinkTest"),
+                new PrestoWarning(UDF_DEPRECATED_WARNINGS,
+                        "UDF: count():bigint has the following warning: testMessage : jiraLinkTest"),
+                new PrestoWarning(SESSION_DEPRECATED_WARNINGS,
+                        "Session Property: query_priority has the following warning: testMessage : jiraLinkTest"));
+        assertWarning(warnings, expectedWarnings);
 
         warnings = this.internalDeprecatedWarningsManager.getDeprecatedWarnings(createDeprecatedWarningContext(new Analysis(null, new ArrayList<>(), false), session));
-        assertFalse(warnings.stream().anyMatch(t -> t.getWarningCode().getCode() == 262));
-        assertFalse(warnings.stream().anyMatch(t -> t.getWarningCode().getCode() == 263));
-        assertWarning(warnings, 264, String.format("The query may have issues because of the following session property(s). Session Property: query_priority has the following warning: testMessage : jiraLinkTest in grid %s", grid));
-        assertFalse(warnings.stream().anyMatch(t -> t.getWarningCode().getCode() == 265));
+        assertFalse(warnings.stream().anyMatch(t -> t.getWarningCode().getCode() == 8));
+        assertFalse(warnings.stream().anyMatch(t -> t.getWarningCode().getCode() == 9));
+        assertWarning(warnings, ImmutableList.of(new PrestoWarning(SESSION_DEPRECATED_WARNINGS,
+                "Session Property: query_priority has the following warning: testMessage : jiraLinkTest")));
     }
 
-    private void assertWarning(List<PrestoWarning> warningList, int warningCode, String warningMessage)
+    private void assertWarning(List<PrestoWarning> warningList, List<PrestoWarning> expectedWarnings)
     {
-        assertTrue(warningList.stream().anyMatch(t -> t.getWarningCode().getCode() == warningCode));
+        assertTrue(warningList.size() == expectedWarnings.size());
         for (PrestoWarning warning : warningList) {
-            if (warning.getWarningCode().getCode() == warningCode) {
-                assertTrue(warning.getMessage().equals(warningMessage));
-            }
+            assertTrue(expectedWarnings.contains(warning));
         }
     }
 

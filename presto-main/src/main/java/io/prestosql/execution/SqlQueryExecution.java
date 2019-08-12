@@ -35,6 +35,7 @@ import io.prestosql.execution.scheduler.NodeScheduler;
 import io.prestosql.execution.scheduler.SplitSchedulerStats;
 import io.prestosql.execution.scheduler.SqlQueryScheduler;
 import io.prestosql.execution.warnings.InternalDeprecatedWarningsManager;
+import io.prestosql.execution.warnings.QueryPhaseWarningCollector;
 import io.prestosql.execution.warnings.WarningCollector;
 import io.prestosql.failuredetector.FailureDetector;
 import io.prestosql.memory.VersionedMemoryPoolId;
@@ -100,6 +101,7 @@ public class SqlQueryExecution
     private static final Logger log = Logger.get(SqlQueryExecution.class);
 
     private static final OutputBufferId OUTPUT_BUFFER_ID = new OutputBufferId(0);
+    private static final String PLANNING_PHASE = "planning_phase";
 
     private final QueryStateMachine stateMachine;
     private final String slug;
@@ -320,6 +322,8 @@ public class SqlQueryExecution
                     return;
                 }
 
+                QueryPhaseWarningCollector planningPhaseWarningCollector =
+                        stateMachine.getWarningCollector().getQueryPhaseWarningCollector(PLANNING_PHASE);
                 // analyze query
                 PlanRoot plan = analyzeQuery();
 
@@ -336,7 +340,7 @@ public class SqlQueryExecution
 
                 List<PrestoWarning> deprecatedWarnings =
                         internalDeprecatedWarningsManager.getDeprecatedWarnings(createDeprecatedWarningContext(analysis, getSession()));
-                deprecatedWarnings.forEach(stateMachine.getWarningCollector()::add);
+                deprecatedWarnings.forEach(warning -> planningPhaseWarningCollector.add(warning));
 
                 // if query is not finished, start the scheduler, otherwise cancel it
                 SqlQueryScheduler scheduler = queryScheduler.get();
@@ -355,9 +359,13 @@ public class SqlQueryExecution
     private DeprecatedWarningContext createDeprecatedWarningContext(Analysis analysis, Session session)
     {
         return new DeprecatedWarningContext(
-                session.getCatalog(),
-                session.getSchema(),
-                analysis.getTablesFromNodes(),
+                analysis
+                    .getTableColumnReferences()
+                    .values()
+                    .stream()
+                    .map(qualifiedObjectName -> qualifiedObjectName.keySet())
+                    .flatMap(setOfQualifedObjectNames -> setOfQualifedObjectNames.stream())
+                    .collect(ImmutableList.toImmutableList()),
                 ImmutableList.copyOf(analysis.getFunctionSignature().values()),
                 session.getSystemProperties(),
                 analysis.getViews());

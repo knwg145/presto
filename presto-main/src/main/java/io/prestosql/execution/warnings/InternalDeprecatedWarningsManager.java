@@ -19,9 +19,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.airlift.node.NodeInfo;
+import io.prestosql.metadata.QualifiedObjectName;
 import io.prestosql.metadata.Signature;
 import io.prestosql.spi.PrestoWarning;
-import io.prestosql.spi.connector.StandardWarningCode;
 import io.prestosql.spi.deprecatedwarnings.DeprecatedWarningMessage;
 import io.prestosql.spi.deprecatedwarnings.DeprecatedWarningsConfigurationManager;
 import io.prestosql.spi.deprecatedwarnings.DeprecatedWarningsConfigurationManagerContext;
@@ -29,14 +29,12 @@ import io.prestosql.spi.deprecatedwarnings.DeprecatedWarningsConfigurationManage
 import io.prestosql.spi.type.TypeSignature;
 import io.prestosql.sql.deprecatedwarnings.DeprecatedWarningContext;
 import io.prestosql.sql.deprecatedwarnings.DeprecatedWarningsConfigurationManagerContextInstance;
-import io.prestosql.sql.tree.Table;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -47,7 +45,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static io.prestosql.spi.connector.StandardWarningCode.SESSION_DEPRECATED_WARNINGS;
 import static io.prestosql.spi.connector.StandardWarningCode.TABLE_DEPRECATED_WARNINGS;
 import static io.prestosql.spi.connector.StandardWarningCode.UDF_DEPRECATED_WARNINGS;
-import static io.prestosql.spi.connector.StandardWarningCode.VIEW_DEPRECATED_WARNINGS;
 import static io.prestosql.util.PropertiesUtil.loadProperties;
 import static java.lang.String.format;
 
@@ -60,13 +57,11 @@ public class InternalDeprecatedWarningsManager
     private final Map<String, DeprecatedWarningsConfigurationManagerFactory> factories = new ConcurrentHashMap<>();
     private final AtomicReference<DeprecatedWarningsConfigurationManager> delegate = new AtomicReference<>();
     private final DeprecatedWarningsConfigurationManagerContext configurationManagerContext;
-    private final String grid;
 
     @Inject
     public InternalDeprecatedWarningsManager(NodeInfo nodeInfo)
     {
         configurationManagerContext = new DeprecatedWarningsConfigurationManagerContextInstance(nodeInfo.getEnvironment());
-        grid = configurationManagerContext.getEnvironment();
     }
 
     public List<PrestoWarning> getDeprecatedWarnings(DeprecatedWarningContext deprecatedWarningContext)
@@ -77,104 +72,50 @@ public class InternalDeprecatedWarningsManager
 
         ImmutableList.Builder<PrestoWarning> allWarnings = new ImmutableList.Builder<>();
 
-        Set<String> tableDeprecatedWarnings = generateTableDeprecatedWarning(
-                deprecatedWarningContext.getTables(),
-                deprecatedWarningContext.getCatalog(),
-                deprecatedWarningContext.getSchema());
-        if (!tableDeprecatedWarnings.isEmpty()) {
-            allWarnings.add(generatePrestoWarning(
-                    "The query may have issues because of the following table(s). ",
-                    tableDeprecatedWarnings,
-                    TABLE_DEPRECATED_WARNINGS));
-        }
+        Set<PrestoWarning> tableDeprecatedWarnings = generateTableDeprecatedWarning(
+                deprecatedWarningContext.getTables(), deprecatedWarningContext.getViews());
+        allWarnings.addAll(tableDeprecatedWarnings);
 
-        Set<String> udfDeprecatedWarnings = generateUDFDeprecatedWarning(deprecatedWarningContext.getFunctionSignatures());
-        if (!udfDeprecatedWarnings.isEmpty()) {
-            allWarnings.add(generatePrestoWarning(
-                    "The query may have issues because of the following UDF(s). ",
-                    udfDeprecatedWarnings,
-                    UDF_DEPRECATED_WARNINGS));
-        }
+        Set<PrestoWarning> udfDeprecatedWarnings = generateUDFDeprecatedWarning(deprecatedWarningContext.getFunctionSignatures());
+        allWarnings.addAll(udfDeprecatedWarnings);
 
-        Set<String> sessionPropertyDeprecatedWarnings = generateSessionPropertyDeprecatedWarning(deprecatedWarningContext.getSystemProperties());
-        if (!sessionPropertyDeprecatedWarnings.isEmpty()) {
-            allWarnings.add(generatePrestoWarning(
-                    "The query may have issues because of the following session property(s). ",
-                    sessionPropertyDeprecatedWarnings,
-                    SESSION_DEPRECATED_WARNINGS));
-        }
+        Set<PrestoWarning> sessionPropertyDeprecatedWarnings = generateSessionPropertyDeprecatedWarning(deprecatedWarningContext.getSystemProperties());
+        allWarnings.addAll(sessionPropertyDeprecatedWarnings);
 
-        Set<String> viewDeprecatedWarnings = generateViewDeprecatedWarning(deprecatedWarningContext.getViews());
-        if (!viewDeprecatedWarnings.isEmpty()) {
-            allWarnings.add(generatePrestoWarning(
-                    "The query may have issues because of the following view(s). ",
-                    viewDeprecatedWarnings,
-                    VIEW_DEPRECATED_WARNINGS));
-        }
         return allWarnings.build();
     }
 
-    private PrestoWarning generatePrestoWarning(String highLevelMessage, Set<String> warnings, StandardWarningCode standardWarningCode)
+    private Set<PrestoWarning> generateTableDeprecatedWarning(
+            List<QualifiedObjectName> tables, Set<QualifiedObjectName> views)
     {
-        StringBuilder messageBuilder = new StringBuilder();
-        messageBuilder.append(highLevelMessage);
-        messageBuilder.append(String.join(",", warnings));
-        return new PrestoWarning(standardWarningCode, messageBuilder.toString());
-    }
-
-    private Set<String> generateTableDeprecatedWarning(
-            List<Table> tables,
-            Optional<String> catalog,
-            Optional<String> schema)
-    {
-        ImmutableSet.Builder<String> warnings = new ImmutableSet.Builder<>();
-        for (Table table : tables) {
-            List<String> tableParts = getTableParts(table, catalog, schema);
-            String catalogName = tableParts.get(0);
-            String schemaName = tableParts.get(1);
-            String tableName = tableParts.get(2);
+        ImmutableSet.Builder<PrestoWarning> warnings = new ImmutableSet.Builder<>();
+        for (QualifiedObjectName qualifiedObjectName : tables) {
+            String catalogName = qualifiedObjectName.getCatalogName();
+            String schemaName = qualifiedObjectName.getSchemaName();
+            String tableName = qualifiedObjectName.getObjectName();
 
             List<DeprecatedWarningMessage> deprecatedWarningMessages = delegate.get().getTableDeprecatedInfo(catalogName, schemaName, tableName);
             for (DeprecatedWarningMessage deprecatedWarningMessage : deprecatedWarningMessages) {
                 String warningMessage = deprecatedWarningMessage.getWarningMessage().get();
                 String jiraLink = deprecatedWarningMessage.getJiraLink().get();
-                warnings.add(format("%s.%s.%s has the following warning: %s : %s in grid %s",
-                        catalogName, schemaName, tableName, warningMessage, jiraLink, grid));
+                PrestoWarning warning;
+                if (!views.contains(qualifiedObjectName)) {
+                    warning = new PrestoWarning(TABLE_DEPRECATED_WARNINGS, format("Table %s.%s.%s has the following warning: %s : %s",
+                        catalogName, schemaName, tableName, warningMessage, jiraLink));
+                }
+                else {
+                    warning = new PrestoWarning(TABLE_DEPRECATED_WARNINGS, format("View %s.%s.%s has the following warning: %s : %s",
+                        catalogName, schemaName, tableName, warningMessage, jiraLink));
+                }
+                warnings.add(warning);
             }
         }
         return warnings.build();
     }
 
-    private List<String> getTableParts(Table table, Optional<String> catalog, Optional<String> schema)
+    private Set<PrestoWarning> generateUDFDeprecatedWarning(List<Signature> functionSignatures)
     {
-        String catalogName = "";
-        String schemaName = "";
-        String tableName = "";
-        if (catalog.isPresent()) {
-            catalogName = catalog.get();
-        }
-        if (schema.isPresent()) {
-            schemaName = schema.get();
-        }
-
-        List<String> parts = table.getName().getParts();
-        for (int i = parts.size() - 1; i >= 0; i--) {
-            if (i == parts.size() - 1) {
-                tableName = parts.get(i);
-            }
-            else if (i == parts.size() - 2) {
-                schemaName = parts.get(i);
-            }
-            else if (i == parts.size() - 3) {
-                catalogName = parts.get(i);
-            }
-        }
-        return ImmutableList.of(catalogName, schemaName, tableName);
-    }
-
-    private Set<String> generateUDFDeprecatedWarning(List<Signature> functionSignatures)
-    {
-        ImmutableSet.Builder<String> warnings = new ImmutableSet.Builder<>();
+        ImmutableSet.Builder<PrestoWarning> warnings = new ImmutableSet.Builder<>();
         for (Signature signature : functionSignatures) {
             String functionName = signature.getName();
             String arguments = signature.getArgumentTypes().stream().map(TypeSignature::getBase).collect(Collectors.joining(","));
@@ -184,39 +125,24 @@ public class InternalDeprecatedWarningsManager
             for (DeprecatedWarningMessage deprecatedWarningMessage : deprecatedWarningMessages) {
                 String warningMessage = deprecatedWarningMessage.getWarningMessage().get();
                 String jiraLink = deprecatedWarningMessage.getJiraLink().get();
-                warnings.add(format("UDF: %s(%s):%s has the following warning: %s : %s in grid %s", functionName, arguments, returnType, warningMessage, jiraLink, grid));
+                warnings.add(new PrestoWarning(UDF_DEPRECATED_WARNINGS, format("UDF: %s(%s):%s has the following warning: %s : %s",
+                        functionName, arguments, returnType, warningMessage, jiraLink)));
             }
         }
         return warnings.build();
     }
 
-    private Set<String> generateSessionPropertyDeprecatedWarning(Map<String, String> systemProperties)
+    private Set<PrestoWarning> generateSessionPropertyDeprecatedWarning(Map<String, String> systemProperties)
     {
-        ImmutableSet.Builder<String> warnings = new ImmutableSet.Builder<>();
+        ImmutableSet.Builder<PrestoWarning> warnings = new ImmutableSet.Builder<>();
         for (String systemProperty : systemProperties.keySet()) {
             List<DeprecatedWarningMessage> deprecatedWarningMessages =
                     delegate.get().getSessionPropertyDeprecatedInfo(systemProperty, systemProperties.get(systemProperty));
             for (DeprecatedWarningMessage deprecatedWarningMessage : deprecatedWarningMessages) {
                 String warningMessage = deprecatedWarningMessage.getWarningMessage().get();
                 String jiraLink = deprecatedWarningMessage.getJiraLink().get();
-                warnings.add(format("Session Property: %s has the following warning: %s : %s in grid %s",
-                        systemProperty, warningMessage, jiraLink, grid));
-            }
-        }
-        return warnings.build();
-    }
-
-    private Set<String> generateViewDeprecatedWarning(Set<Table> views)
-    {
-        ImmutableSet.Builder<String> warnings = new ImmutableSet.Builder<>();
-        for (Table table : views) {
-            String tableName = table.getName().toString();
-            List<DeprecatedWarningMessage> deprecatedWarningMessages = delegate.get().getViewDeprecatedInfo(tableName);
-            for (DeprecatedWarningMessage deprecatedWarningMessage : deprecatedWarningMessages) {
-                String warningMessage = deprecatedWarningMessage.getWarningMessage().get();
-                String jiraLink = deprecatedWarningMessage.getJiraLink().get();
-                warnings.add(format("View: %s has the following warning: %s : %s in grid %s",
-                        tableName, warningMessage, jiraLink, grid));
+                warnings.add(new PrestoWarning(SESSION_DEPRECATED_WARNINGS, format("Session Property: %s has the following warning: %s : %s",
+                        systemProperty, warningMessage, jiraLink)));
             }
         }
         return warnings.build();

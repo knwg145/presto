@@ -49,13 +49,11 @@ public class TestDbDeprecatedWarningsManager
         dao.dropTableWarningsTable();
         dao.dropSessionPropertyWarningsTable();
         dao.dropUDFWarningsTable();
-        dao.dropViewWarningsTable();
 
         dao.createWarningsTable();
         dao.createTableWarningsTable();
         dao.createSessionPropertyWarningsTable();
         dao.createUDFWarningsTable();
-        dao.createViewWarningsTable();
 
         dao.insertWarnings("testMessage", "jiraLinkTest");
         dao.insertWarnings("testMessage2", "jiraLinkTest2");
@@ -118,41 +116,24 @@ public class TestDbDeprecatedWarningsManager
     }
 
     @Test
-    public void testViewDynamicWarnings()
-    {
-        List<DeprecatedWarningMessage> deprecatedWarningMessages = manager.getViewDeprecatedInfo("test");
-        assertTrue(deprecatedWarningMessages.isEmpty());
-
-        dao.insertViewWarnings("test", "1", 1);
-        try {
-            Thread.sleep(5000);
-        }
-        catch (Exception e) {
-        }
-
-        deprecatedWarningMessages = manager.getViewDeprecatedInfo("test");
-        assertMessage(deprecatedWarningMessages.get(0), "testMessage", "jiraLinkTest");
-    }
-
-    @Test
     public void testReload()
     {
-        List<DeprecatedWarningMessage> deprecatedWarningMessages = manager.getViewDeprecatedInfo("test");
+        List<DeprecatedWarningMessage> deprecatedWarningMessages = manager.getTableDeprecatedInfo("hive", "testSchema", "test");
         assertTrue(deprecatedWarningMessages.isEmpty());
 
-        dao.insertViewWarnings("test", "1", 1);
-        dao.dropViewWarningsTable();
+        dao.insertTableWarnings("hive", "testSchema", "test", "1", 1);
+        dao.dropTableWarningsTable();
         try {
             Thread.sleep(5000);
         }
         catch (Exception e) {
         }
 
-        deprecatedWarningMessages = manager.getViewDeprecatedInfo("test");
+        deprecatedWarningMessages = manager.getTableDeprecatedInfo("hive", "testSchema", "test");
         assertTrue(deprecatedWarningMessages.isEmpty());
 
-        dao.createViewWarningsTable();
-        dao.insertViewWarnings("test", "1", 1);
+        dao.createTableWarningsTable();
+        dao.insertTableWarnings("hive", "testSchema", "test", "1", 1);
 
         try {
             Thread.sleep(5000);
@@ -160,16 +141,16 @@ public class TestDbDeprecatedWarningsManager
         catch (Exception e) {
         }
 
-        deprecatedWarningMessages = manager.getViewDeprecatedInfo("test");
+        deprecatedWarningMessages = manager.getTableDeprecatedInfo("hive", "testSchema", "test");
         assertMessage(deprecatedWarningMessages.get(0), "testMessage", "jiraLinkTest");
     }
 
     @Test
     public void testMultipleMatches()
     {
-        dao.insertViewWarnings("test", "1", 1);
-        dao.insertViewWarnings("test", "1", 2);
-        List<DeprecatedWarningMessage> deprecatedWarningMessages = manager.getViewDeprecatedInfo("test");
+        dao.insertTableWarnings("hive", "testSchema", "test", "1", 1);
+        dao.insertTableWarnings("hive", "testSchema", "test", "1", 2);
+        List<DeprecatedWarningMessage> deprecatedWarningMessages = manager.getTableDeprecatedInfo("hive", "testSchema", "test");
         assertTrue(deprecatedWarningMessages.size() == 2);
         assertMessage(deprecatedWarningMessages.get(0), "testMessage", "jiraLinkTest");
         assertMessage(deprecatedWarningMessages.get(1), "testMessage2", "jiraLinkTest2");
@@ -178,8 +159,8 @@ public class TestDbDeprecatedWarningsManager
     @Test
     public void testNullInDb()
     {
-        dao.insertViewWarnings("test", null, 1);
-        List<DeprecatedWarningMessage> deprecatedWarningMessages = manager.getViewDeprecatedInfo("test");
+        dao.insertTableWarnings("hive", "testSchema", null, "1", 1);
+        List<DeprecatedWarningMessage> deprecatedWarningMessages = manager.getTableDeprecatedInfo("hive", "testSchema", "test");
         assertTrue(deprecatedWarningMessages.size() == 0);
 
         dao.insertSessionPropertyWarnings("query_priority", "1", null, 1);

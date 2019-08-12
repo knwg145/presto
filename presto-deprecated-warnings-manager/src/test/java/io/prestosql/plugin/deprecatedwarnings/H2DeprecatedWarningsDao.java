@@ -67,14 +67,4 @@ public interface H2DeprecatedWarningsDao
                     @Bind("badValue") String badValue,
                     @Bind("grid") String grid,
                     @Bind("warningId") long warningId);
-
-    @SqlUpdate("INSERT INTO viewWarnings(view, grid, warningId)\n" +
-            "VALUES (\n" +
-            "   :view,\n" +
-            "   :grid,\n" +
-            "   :warningId\n" +
-            ")")
-    void insertViewWarnings(@Bind("view") String view,
-                    @Bind("grid") String grid,
-                    @Bind("warningId") long warningId);
 }
