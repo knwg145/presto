@@ -74,6 +74,7 @@ public class QueryInfo
     private final Optional<Output> output;
     private final boolean completeInfo;
     private final Optional<ResourceGroupId> resourceGroupId;
+    private final Optional<String> setSessionAuthorizationUsername;
 
     @JsonCreator
     public QueryInfo(
@@ -105,7 +106,8 @@ public class QueryInfo
             @JsonProperty("inputs") Set<Input> inputs,
             @JsonProperty("output") Optional<Output> output,
             @JsonProperty("completeInfo") boolean completeInfo,
-            @JsonProperty("resourceGroupId") Optional<ResourceGroupId> resourceGroupId)
+            @JsonProperty("resourceGroupId") Optional<ResourceGroupId> resourceGroupId,
+            @JsonProperty("setSessionAuthorizationUsername") Optional<String> setSessionAuthorizationUsername)
     {
         requireNonNull(queryId, "queryId is null");
         requireNonNull(session, "session is null");
@@ -128,6 +130,7 @@ public class QueryInfo
         requireNonNull(output, "output is null");
         requireNonNull(resourceGroupId, "resourceGroupId is null");
         requireNonNull(warnings, "warnings is null");
+        requireNonNull(setSessionAuthorizationUsername, "setSessionAuthorizationUsername is null");
 
         this.queryId = queryId;
         this.session = session;
@@ -159,6 +162,7 @@ public class QueryInfo
         this.output = output;
         this.completeInfo = completeInfo;
         this.resourceGroupId = resourceGroupId;
+        this.setSessionAuthorizationUsername = setSessionAuthorizationUsername;
     }
 
     @JsonProperty
@@ -319,6 +323,12 @@ public class QueryInfo
     public List<PrestoWarning> getWarnings()
     {
         return warnings;
+    }
+
+    @JsonProperty
+    public Optional<String> getSetSessionAuthorizationUsername()
+    {
+        return setSessionAuthorizationUsername;
     }
 
     @JsonProperty

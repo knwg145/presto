@@ -51,6 +51,7 @@ public class ClientSession
     private final Map<String, String> extraCredentials;
     private final String transactionId;
     private final Duration clientRequestTimeout;
+    private final Optional<String> sessionAuthorizationUsername;
 
     public static Builder builder(ClientSession clientSession)
     {
@@ -82,7 +83,8 @@ public class ClientSession
             Map<String, ClientSelectedRole> roles,
             Map<String, String> extraCredentials,
             String transactionId,
-            Duration clientRequestTimeout)
+            Duration clientRequestTimeout,
+            Optional<String> sessionAuthorizationUsername)
     {
         this.server = requireNonNull(server, "server is null");
         this.user = user;
@@ -102,6 +104,7 @@ public class ClientSession
         this.roles = ImmutableMap.copyOf(requireNonNull(roles, "roles is null"));
         this.extraCredentials = ImmutableMap.copyOf(requireNonNull(extraCredentials, "extraCredentials is null"));
         this.clientRequestTimeout = clientRequestTimeout;
+        this.sessionAuthorizationUsername = requireNonNull(sessionAuthorizationUsername, "sessionAuthorizationUsername is null");
 
         for (String clientTag : clientTags) {
             checkArgument(!clientTag.contains(","), "client tag cannot contain ','");
@@ -220,6 +223,11 @@ public class ClientSession
         return transactionId;
     }
 
+    public Optional<String> getSessionAuthorizationUsername()
+    {
+        return sessionAuthorizationUsername;
+    }
+
     public boolean isDebug()
     {
         return false;
@@ -270,6 +278,7 @@ public class ClientSession
         private Map<String, String> credentials;
         private String transactionId;
         private Duration clientRequestTimeout;
+        private Optional<String> sessionAuthorizationUsername;
 
         private Builder(ClientSession clientSession)
         {
@@ -292,6 +301,7 @@ public class ClientSession
             credentials = clientSession.getExtraCredentials();
             transactionId = clientSession.getTransactionId();
             clientRequestTimeout = clientSession.getClientRequestTimeout();
+            sessionAuthorizationUsername = clientSession.getSessionAuthorizationUsername();
         }
 
         public Builder withCatalog(String catalog)
@@ -348,6 +358,12 @@ public class ClientSession
             return this;
         }
 
+        public Builder withSessionAuthorizationUsername(Optional<String> sessionAuthorizationUsername)
+        {
+            this.sessionAuthorizationUsername = sessionAuthorizationUsername;
+            return this;
+        }
+
         public ClientSession build()
         {
             return new ClientSession(
@@ -368,7 +384,8 @@ public class ClientSession
                     roles,
                     credentials,
                     transactionId,
-                    clientRequestTimeout);
+                    clientRequestTimeout,
+                    sessionAuthorizationUsername);
         }
     }
 }

@@ -161,4 +161,10 @@ public class TestingSessionContext
     {
         return session.isClientTransactionSupport();
     }
+
+    @Override
+    public Optional<Identity> getOriginalIdentity()
+    {
+        return session.getOriginalIdentity();
+    }
 }

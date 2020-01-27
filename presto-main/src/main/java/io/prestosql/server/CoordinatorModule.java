@@ -80,6 +80,7 @@ import io.prestosql.execution.RevokeTask;
 import io.prestosql.execution.RollbackTask;
 import io.prestosql.execution.SetPathTask;
 import io.prestosql.execution.SetRoleTask;
+import io.prestosql.execution.SetSessionAuthorizationTask;
 import io.prestosql.execution.SetSessionTask;
 import io.prestosql.execution.SqlQueryManager;
 import io.prestosql.execution.StartTransactionTask;
@@ -140,6 +141,7 @@ import io.prestosql.sql.tree.Rollback;
 import io.prestosql.sql.tree.SetPath;
 import io.prestosql.sql.tree.SetRole;
 import io.prestosql.sql.tree.SetSession;
+import io.prestosql.sql.tree.SetSessionAuthorization;
 import io.prestosql.sql.tree.StartTransaction;
 import io.prestosql.sql.tree.Statement;
 import io.prestosql.sql.tree.Use;
@@ -346,6 +348,7 @@ public class CoordinatorModule
         bindDataDefinitionTask(binder, executionBinder, Prepare.class, PrepareTask.class);
         bindDataDefinitionTask(binder, executionBinder, Deallocate.class, DeallocateTask.class);
         bindDataDefinitionTask(binder, executionBinder, SetPath.class, SetPathTask.class);
+        bindDataDefinitionTask(binder, executionBinder, SetSessionAuthorization.class, SetSessionAuthorizationTask.class);
 
         MapBinder<String, ExecutionPolicy> executionPolicyBinder = newMapBinder(binder, String.class, ExecutionPolicy.class);
         executionPolicyBinder.addBinding("all-at-once").to(AllAtOnceExecutionPolicy.class);

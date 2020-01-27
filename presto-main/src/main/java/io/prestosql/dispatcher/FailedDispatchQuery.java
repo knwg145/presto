@@ -228,7 +228,8 @@ public class FailedDispatchQuery
                 ImmutableSet.of(),
                 Optional.empty(),
                 true,
-                resourceGroupId);
+                resourceGroupId,
+                Optional.empty());
 
         return queryInfo;
     }

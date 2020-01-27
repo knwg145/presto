@@ -162,6 +162,9 @@ class Query
     @GuardedBy("this")
     private Long updateCount;
 
+    @GuardedBy("this")
+    private Optional<String> setSessionAuthorizationUsername = Optional.empty();
+
     public static Query create(
             Session session,
             Slug slug,
@@ -294,6 +297,11 @@ class Query
     public synchronized Optional<TransactionId> getStartedTransactionId()
     {
         return startedTransactionId;
+    }
+
+    public synchronized Optional<String> getSetSessionAuthorizationUsername()
+    {
+        return setSessionAuthorizationUsername;
     }
 
     public synchronized boolean isClearTransactionId()
@@ -483,6 +491,8 @@ class Query
         // update startedTransactionId
         startedTransactionId = queryInfo.getStartedTransactionId();
         clearTransactionId = queryInfo.isClearTransactionId();
+
+        setSessionAuthorizationUsername = queryInfo.getSetSessionAuthorizationUsername();
 
         // first time through, self is null
         QueryResults queryResults = new QueryResults(

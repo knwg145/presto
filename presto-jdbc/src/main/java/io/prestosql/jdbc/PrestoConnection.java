@@ -93,6 +93,7 @@ public class PrestoConnection
     private final Map<String, ClientSelectedRole> roles = new ConcurrentHashMap<>();
     private final AtomicReference<String> transactionId = new AtomicReference<>();
     private final QueryExecutor queryExecutor;
+    private final AtomicReference<String> sessionAuthorizationUsername = new AtomicReference<>();
 
     PrestoConnection(PrestoDriverUri uri, QueryExecutor queryExecutor)
             throws SQLException
@@ -702,7 +703,8 @@ public class PrestoConnection
                 ImmutableMap.copyOf(roles),
                 extraCredentials,
                 transactionId.get(),
-                timeout);
+                timeout,
+                Optional.empty());
 
         return queryExecutor.startQuery(session, sql);
     }
@@ -720,6 +722,7 @@ public class PrestoConnection
         client.getSetCatalog().ifPresent(catalog::set);
         client.getSetSchema().ifPresent(schema::set);
         client.getSetPath().ifPresent(path::set);
+        client.getSetSessionAuthorizationUsername().ifPresent(sessionAuthorizationUsername::set);
 
         if (client.getStartedTransactionId() != null) {
             transactionId.set(client.getStartedTransactionId());

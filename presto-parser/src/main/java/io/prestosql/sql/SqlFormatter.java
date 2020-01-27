@@ -87,6 +87,7 @@ import io.prestosql.sql.tree.SelectItem;
 import io.prestosql.sql.tree.SetPath;
 import io.prestosql.sql.tree.SetRole;
 import io.prestosql.sql.tree.SetSession;
+import io.prestosql.sql.tree.SetSessionAuthorization;
 import io.prestosql.sql.tree.ShowCatalogs;
 import io.prestosql.sql.tree.ShowColumns;
 import io.prestosql.sql.tree.ShowCreate;
@@ -1270,6 +1271,24 @@ public final class SqlFormatter
                     break;
                 case ROLE:
                     builder.append(node.getRole().get());
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported type: " + type);
+            }
+            return null;
+        }
+
+        @Override
+        protected Void visitSetSessionAuthorization(SetSessionAuthorization node, Integer context)
+        {
+            builder.append("SET SESSION AUTHORIZATION ");
+            SetSessionAuthorization.Type type = node.getType();
+            switch (type) {
+                case DEFAULT:
+                    builder.append(type.toString());
+                    break;
+                case USERNAME:
+                    builder.append(node.getUsername().get());
                     break;
                 default:
                     throw new IllegalArgumentException("Unsupported type: " + type);

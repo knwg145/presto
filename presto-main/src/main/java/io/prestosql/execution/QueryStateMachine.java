@@ -147,6 +147,7 @@ public class QueryStateMachine
 
     private final AtomicReference<Set<Input>> inputs = new AtomicReference<>(ImmutableSet.of());
     private final AtomicReference<Optional<Output>> output = new AtomicReference<>(Optional.empty());
+    private final AtomicReference<String> setSessionAuthorzationUsername = new AtomicReference<>();
     private final StateMachine<Optional<QueryInfo>> finalQueryInfo;
 
     private final WarningCollector warningCollector;
@@ -421,7 +422,8 @@ public class QueryStateMachine
                 inputs.get(),
                 output.get(),
                 completeInfo,
-                Optional.of(resourceGroup));
+                Optional.of(resourceGroup),
+                Optional.ofNullable(setSessionAuthorzationUsername.get()));
     }
 
     private QueryStats getQueryStats(Optional<StageInfo> rootStage)
@@ -657,6 +659,11 @@ public class QueryStateMachine
     public void addSetRole(String catalog, SelectedRole role)
     {
         setRoles.put(requireNonNull(catalog, "catalog is null"), requireNonNull(role, "role is null"));
+    }
+
+    public void addSetSessionAuthorizationUsername(String userName)
+    {
+        setSessionAuthorzationUsername.set(requireNonNull(userName, "userName is null"));
     }
 
     public Set<String> getResetSessionProperties()
@@ -1020,7 +1027,8 @@ public class QueryStateMachine
                 queryInfo.getInputs(),
                 queryInfo.getOutput(),
                 queryInfo.isCompleteInfo(),
-                queryInfo.getResourceGroupId());
+                queryInfo.getResourceGroupId(),
+                queryInfo.getSetSessionAuthorizationUsername());
         finalQueryInfo.compareAndSet(finalInfo, Optional.of(prunedQueryInfo));
     }
 

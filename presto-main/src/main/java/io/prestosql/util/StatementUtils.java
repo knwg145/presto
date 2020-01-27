@@ -51,6 +51,7 @@ import io.prestosql.sql.tree.Rollback;
 import io.prestosql.sql.tree.SetPath;
 import io.prestosql.sql.tree.SetRole;
 import io.prestosql.sql.tree.SetSession;
+import io.prestosql.sql.tree.SetSessionAuthorization;
 import io.prestosql.sql.tree.ShowCatalogs;
 import io.prestosql.sql.tree.ShowColumns;
 import io.prestosql.sql.tree.ShowCreate;
@@ -131,6 +132,7 @@ public final class StatementUtils
         builder.put(Prepare.class, QueryType.DATA_DEFINITION);
         builder.put(Deallocate.class, QueryType.DATA_DEFINITION);
         builder.put(SetPath.class, QueryType.DATA_DEFINITION);
+        builder.put(SetSessionAuthorization.class, QueryType.DATA_DEFINITION);
         STATEMENT_QUERY_TYPES = builder.build();
     }
 

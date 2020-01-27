@@ -65,6 +65,7 @@ import static io.prestosql.client.PrestoHeaders.PRESTO_RESOURCE_ESTIMATE;
 import static io.prestosql.client.PrestoHeaders.PRESTO_ROLE;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SCHEMA;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SESSION;
+import static io.prestosql.client.PrestoHeaders.PRESTO_SET_SESSION_AUTHORIZATION_USERNAME;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SOURCE;
 import static io.prestosql.client.PrestoHeaders.PRESTO_TIME_ZONE;
 import static io.prestosql.client.PrestoHeaders.PRESTO_TRACE_TOKEN;
@@ -107,6 +108,7 @@ public final class HttpRequestSessionContext
     private final Optional<TransactionId> transactionId;
     private final boolean clientTransactionSupport;
     private final String clientInfo;
+    private final Optional<Identity> originalIdentity;
 
     public HttpRequestSessionContext(HeaderSupport forwardedHeaderSupport, HttpServletRequest servletRequest)
             throws WebApplicationException
@@ -125,8 +127,20 @@ public final class HttpRequestSessionContext
                     .build());
 
         String user = trimEmptyToNull(servletRequest.getHeader(PRESTO_USER));
+
         if (user == null) {
             user = authenticatedUser;
+        }
+        originalIdentity = Optional.ofNullable(user)
+                .map(prestoUser -> Identity.forUser(prestoUser)
+                    .withPrincipal(Optional.ofNullable(servletRequest.getUserPrincipal()))
+                    .withRoles(parseRoleHeaders(servletRequest))
+                    .withExtraCredentials(parseExtraCredentials(servletRequest))
+                    .build());
+        String sessionAuthorizationUsername = trimEmptyToNull(servletRequest.getHeader(PRESTO_SET_SESSION_AUTHORIZATION_USERNAME));
+
+        if (sessionAuthorizationUsername != null) {
+            user = sessionAuthorizationUsername;
         }
         assertRequest(user != null, "User must be set");
         identity = Identity.forUser(user)
@@ -332,6 +346,12 @@ public final class HttpRequestSessionContext
     public Optional<String> getTraceToken()
     {
         return traceToken;
+    }
+
+    @Override
+    public Optional<Identity> getOriginalIdentity()
+    {
+        return originalIdentity;
     }
 
     private static List<String> splitSessionHeader(Enumeration<String> headers)

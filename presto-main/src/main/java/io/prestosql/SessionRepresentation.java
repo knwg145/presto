@@ -62,6 +62,7 @@ public final class SessionRepresentation
     private final Map<String, Map<String, String>> unprocessedCatalogProperties;
     private final Map<String, SelectedRole> roles;
     private final Map<String, String> preparedStatements;
+    private final Optional<Identity> originalIdentity;
 
     @JsonCreator
     public SessionRepresentation(
@@ -88,7 +89,8 @@ public final class SessionRepresentation
             @JsonProperty("catalogProperties") Map<CatalogName, Map<String, String>> catalogProperties,
             @JsonProperty("unprocessedCatalogProperties") Map<String, Map<String, String>> unprocessedCatalogProperties,
             @JsonProperty("roles") Map<String, SelectedRole> roles,
-            @JsonProperty("preparedStatements") Map<String, String> preparedStatements)
+            @JsonProperty("preparedStatements") Map<String, String> preparedStatements,
+            @JsonProperty("originalIdentity") Optional<Identity> originalIdentity)
     {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.transactionId = requireNonNull(transactionId, "transactionId is null");
@@ -108,6 +110,7 @@ public final class SessionRepresentation
         this.clientTags = requireNonNull(clientTags, "clientTags is null");
         this.clientCapabilities = requireNonNull(clientCapabilities, "clientCapabilities is null");
         this.resourceEstimates = requireNonNull(resourceEstimates, "resourceEstimates is null");
+        this.originalIdentity = requireNonNull(originalIdentity, "originalIdentity is null");
         this.startTime = startTime;
         this.systemProperties = ImmutableMap.copyOf(systemProperties);
         this.roles = ImmutableMap.copyOf(roles);
@@ -304,6 +307,7 @@ public final class SessionRepresentation
                 catalogProperties,
                 unprocessedCatalogProperties,
                 sessionPropertyManager,
-                preparedStatements);
+                preparedStatements,
+                originalIdentity);
     }
 }

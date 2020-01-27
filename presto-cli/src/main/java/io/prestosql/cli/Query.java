@@ -122,6 +122,11 @@ public class Query
         return client.getStartedTransactionId();
     }
 
+    public Optional<String> getSetSessionAuthorizationUsername()
+    {
+        return client.getSetSessionAuthorizationUsername();
+    }
+
     public boolean isClearTransactionId()
     {
         return client.isClearTransactionId();

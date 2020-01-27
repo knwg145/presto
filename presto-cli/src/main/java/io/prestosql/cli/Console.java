@@ -347,6 +347,10 @@ public class Console
 
             ClientSession.Builder builder = ClientSession.builder(session);
 
+            if (query.getSetSessionAuthorizationUsername().isPresent()) {
+                builder = builder.withSessionAuthorizationUsername(query.getSetSessionAuthorizationUsername());
+            }
+
             if (query.getStartedTransactionId() != null) {
                 builder = builder.withTransactionId(query.getStartedTransactionId());
             }

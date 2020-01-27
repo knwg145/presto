@@ -69,6 +69,7 @@ import static io.prestosql.client.PrestoHeaders.PRESTO_SET_PATH;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SET_ROLE;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SET_SCHEMA;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SET_SESSION;
+import static io.prestosql.client.PrestoHeaders.PRESTO_SET_SESSION_AUTHORIZATION_USERNAME;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SOURCE;
 import static io.prestosql.client.PrestoHeaders.PRESTO_STARTED_TRANSACTION_ID;
 import static io.prestosql.client.PrestoHeaders.PRESTO_TIME_ZONE;
@@ -111,6 +112,7 @@ class StatementClientV1
     private final Duration requestTimeoutNanos;
     private final String user;
     private final String clientCapabilities;
+    private final AtomicReference<String> setSessionAuthorizationUsername = new AtomicReference<>();
 
     private final AtomicReference<State> state = new AtomicReference<>(State.RUNNING);
 
@@ -203,6 +205,9 @@ class StatementClientV1
         builder.addHeader(PRESTO_TRANSACTION_ID, session.getTransactionId() == null ? "NONE" : session.getTransactionId());
 
         builder.addHeader(PRESTO_CLIENT_CAPABILITIES, clientCapabilities);
+
+        session.getSessionAuthorizationUsername()
+                .ifPresent(setSessionAuthorizationUsername -> builder.addHeader(PRESTO_SET_SESSION_AUTHORIZATION_USERNAME, setSessionAuthorizationUsername));
 
         return builder.build();
     }
@@ -330,6 +335,12 @@ class StatementClientV1
         return clearTransactionId.get();
     }
 
+    @Override
+    public Optional<String> getSetSessionAuthorizationUsername()
+    {
+        return Optional.ofNullable(setSessionAuthorizationUsername.get());
+    }
+
     private Request.Builder prepareRequest(HttpUrl url)
     {
         return new Request.Builder()
@@ -448,6 +459,7 @@ class StatementClientV1
         if (headers.get(PRESTO_CLEAR_TRANSACTION_ID) != null) {
             clearTransactionId.set(true);
         }
+        setSessionAuthorizationUsername.set(headers.get(PRESTO_SET_SESSION_AUTHORIZATION_USERNAME));
 
         currentResults.set(results);
     }

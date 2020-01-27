@@ -9,6 +9,7 @@ be quoted (using double quotes) in order to be used as an identifier.
 ============================== ============= =============
 Keyword                        SQL:2016      SQL-92
 ============================== ============= =============
+``AUTHORIZATION``              reserved      reserved
 ``ALTER``                      reserved      reserved
 ``AND``                        reserved      reserved
 ``AS``                         reserved      reserved
@@ -27,6 +28,7 @@ Keyword                        SQL:2016      SQL-92
 ``CURRENT_TIMESTAMP``          reserved      reserved
 ``CURRENT_USER``               reserved
 ``DEALLOCATE``                 reserved      reserved
+``DEFAULT``                    reserved      reserved
 ``DELETE``                     reserved      reserved
 ``DESCRIBE``                   reserved      reserved
 ``DISTINCT``                   reserved      reserved

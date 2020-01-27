@@ -146,6 +146,7 @@ import io.prestosql.sql.tree.SelectItem;
 import io.prestosql.sql.tree.SetPath;
 import io.prestosql.sql.tree.SetRole;
 import io.prestosql.sql.tree.SetSession;
+import io.prestosql.sql.tree.SetSessionAuthorization;
 import io.prestosql.sql.tree.ShowCatalogs;
 import io.prestosql.sql.tree.ShowColumns;
 import io.prestosql.sql.tree.ShowCreate;
@@ -968,6 +969,27 @@ class AstBuilder
             type = SetRole.Type.NONE;
         }
         return new SetRole(getLocation(context), type, getIdentifierIfPresent(context.role));
+    }
+
+    @Override
+    public Node visitSetSessionAuthorization(SqlBaseParser.SetSessionAuthorizationContext context)
+    {
+        SetSessionAuthorization.Type type = SetSessionAuthorization.Type.USERNAME;
+
+        if (context.DEFAULT() != null) {
+            type = SetSessionAuthorization.Type.DEFAULT;
+            return new SetSessionAuthorization(getLocation(context), type, Optional.empty());
+        }
+        if (context.sessionAuthorizationUser() instanceof SqlBaseParser.IdentifierUserNameContext) {
+            return new SetSessionAuthorization(getLocation(context), type, getIdentifierIfPresent(context.sessionAuthorizationUser()));
+        }
+        else if (context.sessionAuthorizationUser() instanceof SqlBaseParser.StringUserNameContext) {
+            Optional<StringLiteral> stringUserName = Optional.of(((StringLiteral) visit(context.sessionAuthorizationUser())));
+            return new SetSessionAuthorization(getLocation(context), type, stringUserName);
+        }
+        else {
+            throw new IllegalArgumentException("Unsupported Session Authorization UserName: " + context);
+        }
     }
 
     @Override

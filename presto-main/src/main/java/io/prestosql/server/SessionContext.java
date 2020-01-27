@@ -72,4 +72,6 @@ public interface SessionContext
     Optional<String> getTraceToken();
 
     boolean supportClientTransaction();
+
+    Optional<Identity> getOriginalIdentity();
 }
