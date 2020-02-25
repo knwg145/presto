@@ -14,8 +14,6 @@
 package io.prestosql.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
 import io.prestosql.client.ClientSession;
@@ -103,26 +101,19 @@ public class TestQueryRunner
 
     static ClientSession createClientSession(MockWebServer server)
     {
-        return new ClientSession(
-                server.url("/").uri(),
-                "user",
-                "source",
-                Optional.empty(),
-                ImmutableSet.of(),
-                "clientInfo",
-                "catalog",
-                "schema",
-                "path",
-                ZoneId.of("America/Los_Angeles"),
-                false,
-                Locale.ENGLISH,
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                null,
-                new Duration(2, MINUTES));
+        return ClientSession.builder()
+                .withServer(server.url("/").uri())
+                .withUser("user")
+                .withSource("source")
+                .withClientInfo("clientInfo")
+                .withCatalog("catalog")
+                .withSchema("schema")
+                .withPath("path")
+                .withTimeZone(ZoneId.of("America/Los_Angeles"))
+                .withLocale(Locale.ENGLISH)
+                .withoutTransactionId()
+                .withClientRequestTimeout(new Duration(2, MINUTES))
+                .build();
     }
 
     static String createResults(MockWebServer server)
