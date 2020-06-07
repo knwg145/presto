@@ -390,6 +390,7 @@ public class LocalQueryRunner
                 withInitialTransaction ? Optional.of(transactionManager.beginTransaction(false)) : defaultSession.getTransactionId(),
                 defaultSession.isClientTransactionSupport(),
                 defaultSession.getIdentity(),
+                defaultSession.getOriginalIdentity(),
                 defaultSession.getSource(),
                 defaultSession.getCatalog(),
                 defaultSession.getSchema(),

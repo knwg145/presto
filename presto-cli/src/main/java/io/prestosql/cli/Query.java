@@ -125,6 +125,11 @@ public class Query
         return client.isClearTransactionId();
     }
 
+    public Optional<String> getAuthorizationUser()
+    {
+        return client.getAuthorizationUser();
+    }
+
     public boolean renderOutput(Terminal terminal, PrintStream out, PrintStream errorChannel, OutputFormat outputFormat, boolean usePager, boolean showProgress)
     {
         Thread clientThread = Thread.currentThread();

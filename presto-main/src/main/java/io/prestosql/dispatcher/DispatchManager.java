@@ -35,6 +35,7 @@ import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.QueryId;
 import io.prestosql.spi.resourcegroups.SelectionContext;
 import io.prestosql.spi.resourcegroups.SelectionCriteria;
+import io.prestosql.spi.security.Identity;
 import io.prestosql.transaction.TransactionManager;
 import org.weakref.jmx.Flatten;
 import org.weakref.jmx.Managed;
@@ -162,6 +163,7 @@ public class DispatchManager
     {
         Session session = null;
         PreparedQuery preparedQuery = null;
+        Identity authorizationIdentity = sessionContext.getAuthorizationIdentity();
         try {
             if (query.length() > maxQueryLength) {
                 int queryLength = query.length();
@@ -173,7 +175,7 @@ public class DispatchManager
             session = sessionSupplier.createSession(queryId, sessionContext);
 
             // check query execute permissions
-            accessControl.checkCanExecuteQuery(sessionContext.getIdentity());
+            accessControl.checkCanExecuteQuery(authorizationIdentity);
 
             // prepare query
             preparedQuery = queryPreparer.prepareQuery(session, query);
@@ -181,9 +183,9 @@ public class DispatchManager
             // select resource group
             Optional<String> queryType = getQueryType(preparedQuery.getStatement().getClass()).map(Enum::name);
             SelectionContext<C> selectionContext = resourceGroupManager.selectGroup(new SelectionCriteria(
-                    sessionContext.getIdentity().getPrincipal().isPresent(),
-                    sessionContext.getIdentity().getUser(),
-                    sessionContext.getIdentity().getGroups(),
+                    authorizationIdentity.getPrincipal().isPresent(),
+                    authorizationIdentity.getUser(),
+                    authorizationIdentity.getGroups(),
                     Optional.ofNullable(sessionContext.getSource()),
                     sessionContext.getClientTags(),
                     sessionContext.getResourceEstimates(),
@@ -218,7 +220,8 @@ public class DispatchManager
             if (session == null) {
                 session = Session.builder(new SessionPropertyManager())
                         .setQueryId(queryId)
-                        .setIdentity(sessionContext.getIdentity())
+                        .setIdentity(authorizationIdentity)
+                        .setOriginalIdentity(sessionContext.getIdentity())
                         .setSource(sessionContext.getSource())
                         .build();
             }

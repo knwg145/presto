@@ -56,6 +56,7 @@ import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.net.HttpHeaders.USER_AGENT;
+import static io.prestosql.client.PrestoHeaders.PRESTO_AUTHORIZATION_USER;
 import static io.prestosql.client.PrestoHeaders.PRESTO_CATALOG;
 import static io.prestosql.client.PrestoHeaders.PRESTO_CLIENT_CAPABILITIES;
 import static io.prestosql.client.PrestoHeaders.PRESTO_CLIENT_INFO;
@@ -91,6 +92,7 @@ public final class HttpRequestSessionContext
 
     private final Optional<Identity> authenticatedIdentity;
     private final Identity identity;
+    private final Identity authorizationIdentity;
 
     private final String source;
     private final Optional<String> traceToken;
@@ -121,6 +123,12 @@ public final class HttpRequestSessionContext
 
         this.authenticatedIdentity = requireNonNull(authenticatedIdentity, "authenticatedIdentity is null");
         identity = buildSessionIdentity(authenticatedIdentity, headers, groupProvider);
+        Optional<String> optionalAuthorizationUser = Optional.ofNullable(trimEmptyToNull(headers.getFirst(PRESTO_AUTHORIZATION_USER)));
+        this.authorizationIdentity = optionalAuthorizationUser.map(authorizationUser -> Identity.from(identity)
+            .withUser(authorizationUser)
+            .withGroups(groupProvider.getGroups(authorizationUser))
+            .build())
+            .orElse(identity);
 
         source = headers.getFirst(PRESTO_SOURCE);
         traceToken = Optional.ofNullable(trimEmptyToNull(headers.getFirst(PRESTO_TRACE_TOKEN)));
@@ -197,7 +205,18 @@ public final class HttpRequestSessionContext
             }
         });
 
-        return identity;
+        Optional<String> optionalAuthorizationUser = Optional.ofNullable(trimEmptyToNull(headers.getFirst(PRESTO_AUTHORIZATION_USER)));
+
+        Identity authorizationIdentity = optionalAuthorizationUser.map(authorizationUser -> Identity.from(identity)
+                .withUser(authorizationUser)
+                .withGroups(groupProvider.getGroups(authorizationUser))
+                .build())
+                .orElse(identity);
+
+        if (!identity.getUser().equals(authorizationIdentity.getUser())) {
+            accessControl.checkCanImpersonateUser(identity, authorizationIdentity.getUser());
+        }
+        return authorizationIdentity;
     }
 
     private static Identity buildSessionIdentity(Optional<Identity> authenticatedIdentity, MultivaluedMap<String, String> headers, GroupProvider groupProvider)
@@ -224,6 +243,12 @@ public final class HttpRequestSessionContext
     public Identity getIdentity()
     {
         return identity;
+    }
+
+    @Override
+    public Identity getAuthorizationIdentity()
+    {
+        return authorizationIdentity;
     }
 
     @Override

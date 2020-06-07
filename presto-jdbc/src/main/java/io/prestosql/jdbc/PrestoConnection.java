@@ -90,6 +90,7 @@ public class PrestoConnection
     private final URI jdbcUri;
     private final URI httpUri;
     private final String user;
+    private final AtomicReference<String> authorizationUser = new AtomicReference<>();
     private final Map<String, String> extraCredentials;
     private final Optional<String> applicationNamePrefix;
     private final Map<ClientInfoProperty, String> clientInfo = new ConcurrentHashMap<>();
@@ -654,6 +655,12 @@ public class PrestoConnection
     }
 
     @VisibleForTesting
+    String getAuthorizationUser()
+    {
+        return authorizationUser.get();
+    }
+
+    @VisibleForTesting
     Map<String, String> getExtraCredentials()
     {
         return ImmutableMap.copyOf(extraCredentials);
@@ -720,6 +727,7 @@ public class PrestoConnection
         ClientSession session = ClientSession.builder()
                 .withServer(httpUri)
                 .withUser(user)
+                .withAuthorizationUser(Optional.ofNullable(authorizationUser.get()))
                 .withSource(source)
                 .withTraceToken(Optional.ofNullable(clientInfo.get("TraceToken")))
                 .withClientTags(ImmutableSet.copyOf(clientTags))
@@ -743,6 +751,8 @@ public class PrestoConnection
 
     void updateSession(StatementClient client)
     {
+        client.getAuthorizationUser().ifPresent(authorizationUser::set);
+
         client.getSetSessionProperties().forEach(sessionProperties::put);
         client.getResetSessionProperties().forEach(sessionProperties::remove);
 

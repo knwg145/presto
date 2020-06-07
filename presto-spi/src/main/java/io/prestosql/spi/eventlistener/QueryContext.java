@@ -27,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 public class QueryContext
 {
     private final String user;
+    private final String originalUser;
     private final Optional<String> principal;
     private final Optional<String> traceToken;
     private final Optional<String> remoteClientAddress;
@@ -52,6 +53,7 @@ public class QueryContext
 
     public QueryContext(
             String user,
+            String originalUser,
             Optional<String> principal,
             Optional<String> traceToken,
             Optional<String> remoteClientAddress,
@@ -71,6 +73,7 @@ public class QueryContext
             Optional<QueryType> queryType)
     {
         this.user = requireNonNull(user, "user is null");
+        this.originalUser = requireNonNull(originalUser, "originalUser is null");
         this.principal = requireNonNull(principal, "principal is null");
         this.traceToken = requireNonNull(traceToken, "traceToken is null");
         this.remoteClientAddress = requireNonNull(remoteClientAddress, "remoteClientAddress is null");
@@ -94,6 +97,12 @@ public class QueryContext
     public String getUser()
     {
         return user;
+    }
+
+    @JsonProperty
+    public String getOriginalUser()
+    {
+        return originalUser;
     }
 
     @JsonProperty

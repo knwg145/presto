@@ -191,7 +191,8 @@ public class TestingPrestoServer
             Module additionalModule,
             Optional<Path> baseDataDir,
             String systemAccessControlName,
-            Map<String, String> systemAccessControlProperties)
+            Map<String, String> systemAccessControlProperties,
+            boolean loadAccessControlManager)
     {
         this.coordinator = coordinator;
 
@@ -316,10 +317,11 @@ public class TestingPrestoServer
         mBeanServer = injector.getInstance(MBeanServer.class);
         announcer = injector.getInstance(Announcer.class);
 
-        accessControl.loadSystemAccessControl(
-                injector.getInstance(Key.get(String.class, TestingAccessControlManager.ForSystemAccessControl.class)),
-                injector.getInstance(Key.get(new TypeLiteral<Map<String, String>>() {}, TestingAccessControlManager.ForSystemAccessControl.class)));
-
+        if (loadAccessControlManager) {
+            accessControl.loadSystemAccessControl(
+                    injector.getInstance(Key.get(String.class, TestingAccessControlManager.ForSystemAccessControl.class)),
+                    injector.getInstance(Key.get(new TypeLiteral<Map<String, String>>() {}, TestingAccessControlManager.ForSystemAccessControl.class)));
+        }
         announcer.forceAnnounce();
 
         refreshNodes();
@@ -575,6 +577,7 @@ public class TestingPrestoServer
         private Optional<Path> baseDataDir = Optional.empty();
         private String systemAccessControlName = AllowAllSystemAccessControl.NAME;
         private Map<String, String> systemAccessControlProperties = ImmutableMap.of();
+        private boolean loadAccessControlManager = true;
 
         public Builder setCoordinator(boolean coordinator)
         {
@@ -619,6 +622,12 @@ public class TestingPrestoServer
             return this;
         }
 
+        public Builder setLoadAccessControlManager(boolean loadAccessControlManager)
+        {
+            this.loadAccessControlManager = loadAccessControlManager;
+            return this;
+        }
+
         public TestingPrestoServer build()
         {
             return new TestingPrestoServer(
@@ -629,7 +638,8 @@ public class TestingPrestoServer
                     additionalModule,
                     baseDataDir,
                     systemAccessControlName,
-                    systemAccessControlProperties);
+                    systemAccessControlProperties,
+                    loadAccessControlManager);
         }
     }
 }

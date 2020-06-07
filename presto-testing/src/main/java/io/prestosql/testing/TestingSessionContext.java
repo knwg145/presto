@@ -51,6 +51,12 @@ public class TestingSessionContext
     }
 
     @Override
+    public Identity getAuthorizationIdentity()
+    {
+        return session.getIdentity();
+    }
+
+    @Override
     public String getCatalog()
     {
         return session.getCatalog().orElse(null);

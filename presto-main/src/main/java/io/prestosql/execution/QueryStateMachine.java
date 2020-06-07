@@ -148,6 +148,8 @@ public class QueryStateMachine
     private final AtomicReference<TransactionId> startedTransactionId = new AtomicReference<>();
     private final AtomicBoolean clearTransactionId = new AtomicBoolean();
 
+    private final AtomicReference<String> authorizationUser = new AtomicReference<>();
+
     private final AtomicReference<String> updateType = new AtomicReference<>();
 
     private final AtomicReference<ExecutionFailureInfo> failureCause = new AtomicReference<>();
@@ -443,6 +445,7 @@ public class QueryStateMachine
                 deallocatedPreparedStatements,
                 Optional.ofNullable(startedTransactionId.get()),
                 clearTransactionId.get(),
+                Optional.ofNullable(authorizationUser.get()),
                 updateType.get(),
                 rootStage,
                 failureCause,
@@ -722,6 +725,11 @@ public class QueryStateMachine
     public void addSetRole(String catalog, SelectedRole role)
     {
         setRoles.put(requireNonNull(catalog, "catalog is null"), requireNonNull(role, "role is null"));
+    }
+
+    public void addAuthorizationUser(String authorizationUser)
+    {
+        this.authorizationUser.set(requireNonNull(authorizationUser, "authorizationUser is null"));
     }
 
     public Set<String> getResetSessionProperties()
@@ -1090,6 +1098,7 @@ public class QueryStateMachine
                 queryInfo.getDeallocatedPreparedStatements(),
                 queryInfo.getStartedTransactionId(),
                 queryInfo.isClearTransactionId(),
+                queryInfo.getAuthorizationUser(),
                 queryInfo.getUpdateType(),
                 prunedOutputStage,
                 queryInfo.getFailureInfo(),

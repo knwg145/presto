@@ -65,6 +65,7 @@ import static io.prestosql.client.PrestoHeaders.PRESTO_ADDED_PREPARE;
 import static io.prestosql.client.PrestoHeaders.PRESTO_CLEAR_SESSION;
 import static io.prestosql.client.PrestoHeaders.PRESTO_CLEAR_TRANSACTION_ID;
 import static io.prestosql.client.PrestoHeaders.PRESTO_DEALLOCATED_PREPARE;
+import static io.prestosql.client.PrestoHeaders.PRESTO_SET_AUTHORIZATION_USER;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SET_CATALOG;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SET_PATH;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SET_ROLE;
@@ -239,6 +240,9 @@ public class ExecutingStatementResource
         // add set roles
         query.getSetRoles()
                 .forEach((key, value) -> response.header(PRESTO_SET_ROLE, key + '=' + urlEncode(value.toString())));
+
+        query.getAuthorizationUser()
+                .ifPresent(authorizationUser -> response.header(PRESTO_SET_AUTHORIZATION_USER, authorizationUser));
 
         // add added prepare statements
         for (Entry<String, String> entry : query.getAddedPreparedStatements().entrySet()) {

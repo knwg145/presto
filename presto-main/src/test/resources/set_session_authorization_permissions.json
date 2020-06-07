@@ -1,0 +1,29 @@
+{
+    "principals": [
+        {
+          "principal": "(.*)",
+          "principal_to_user": "$1",
+          "allow": true
+        },
+        {
+          "principal": "user",
+          "principal_to_user": "headlessAccount1",
+          "allow": true
+        },
+        {
+          "principal": "user2",
+          "principal_to_user": "headlessAccount2",
+          "allow": true
+        }
+    ],
+    "impersonation": [
+        {
+            "originalUser": "user",
+            "newUser": "headlessAccount1"
+        },
+        {
+            "originalUser": "user2",
+            "newUser": "headlessAccount2"
+        }
+    ]
+}

@@ -81,9 +81,14 @@ public class QuerySessionSupplier
             }
         });
 
+        if (!identity.getUser().equals(context.getAuthorizationIdentity().getUser())) {
+            accessControl.checkCanImpersonateUser(identity, context.getAuthorizationIdentity().getUser());
+        }
+
         SessionBuilder sessionBuilder = Session.builder(sessionPropertyManager)
                 .setQueryId(queryId)
-                .setIdentity(identity)
+                .setIdentity(context.getAuthorizationIdentity())
+                .setOriginalIdentity(context.getIdentity())
                 .setSource(context.getSource())
                 .setPath(new SqlPath(path))
                 .setRemoteUserAddress(context.getRemoteUserAddress())

@@ -64,6 +64,8 @@ public interface StatementClient
 
     Set<String> getDeallocatedPreparedStatements();
 
+    Optional<String> getAuthorizationUser();
+
     @Nullable
     String getStartedTransactionId();
 

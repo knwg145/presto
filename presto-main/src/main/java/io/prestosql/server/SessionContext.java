@@ -29,6 +29,8 @@ public interface SessionContext
 
     Identity getIdentity();
 
+    Identity getAuthorizationIdentity();
+
     @Nullable
     String getCatalog();
 

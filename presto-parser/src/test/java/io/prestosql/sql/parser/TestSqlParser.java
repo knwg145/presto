@@ -127,6 +127,7 @@ import io.prestosql.sql.tree.SelectItem;
 import io.prestosql.sql.tree.SetPath;
 import io.prestosql.sql.tree.SetRole;
 import io.prestosql.sql.tree.SetSession;
+import io.prestosql.sql.tree.SetSessionAuthorization;
 import io.prestosql.sql.tree.ShowCatalogs;
 import io.prestosql.sql.tree.ShowColumns;
 import io.prestosql.sql.tree.ShowFunctions;
@@ -2677,6 +2678,14 @@ public class TestSqlParser
                         false,
                         Optional.of(NullTreatment.RESPECT),
                         ImmutableList.of(new Identifier("x"), new LongLiteral("1"))));
+    }
+
+    @Test
+    public void testSetSessionAuthorization()
+    {
+        assertStatement("SET SESSION AUTHORIZATION \"user\"", new SetSessionAuthorization(SetSessionAuthorization.Type.USER, Optional.of(identifier("user"))));
+        assertStatement("SET SESSION AUTHORIZATION 'user'", new SetSessionAuthorization(SetSessionAuthorization.Type.USER, Optional.of(new StringLiteral("user"))));
+        assertStatement("SET SESSION AUTHORIZATION user", new SetSessionAuthorization(SetSessionAuthorization.Type.USER, Optional.of(identifier("user"))));
     }
 
     private static QualifiedName makeQualifiedName(String tableName)

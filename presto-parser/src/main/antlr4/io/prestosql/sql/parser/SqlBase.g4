@@ -126,6 +126,7 @@ statement
         (LIKE pattern=string (ESCAPE escape=string)?)?                 #showFunctions
     | SHOW SESSION
         (LIKE pattern=string (ESCAPE escape=string)?)?                 #showSession
+    | SET SESSION AUTHORIZATION authorizationUser                      #setAuthorizationUser
     | SET SESSION qualifiedName EQ expression                          #setSession
     | RESET SESSION qualifiedName                                      #resetSession
     | START TRANSACTION (transactionMode (',' transactionMode)*)?      #startTransaction
@@ -525,12 +526,17 @@ number
     | MINUS? INTEGER_VALUE  #integerLiteral
     ;
 
+authorizationUser
+    : identifier                    #identifierUser
+    | string                        #stringUser
+    ;
+
 nonReserved
     // IMPORTANT: this rule must only contain tokens. Nested rules are not supported. See SqlParser.exitNonReserved
     : ADD | ADMIN | ALL | ANALYZE | ANY | ARRAY | ASC | AT | AUTHORIZATION
     | BERNOULLI
     | CALL | CASCADE | CATALOGS | COLUMN | COLUMNS | COMMENT | COMMIT | COMMITTED | CURRENT
-    | DATA | DATE | DAY | DEFINER | DESC | DISTRIBUTED | DOUBLE
+    | DATA | DATE | DAY | DEFAULT| DEFINER | DESC | DISTRIBUTED | DOUBLE
     | EXCLUDING | EXPLAIN
     | FETCH | FILTER | FIRST | FOLLOWING | FORMAT | FUNCTIONS
     | GRANT | GRANTED | GRANTS | GRAPHVIZ
@@ -593,6 +599,7 @@ DATA: 'DATA';
 DATE: 'DATE';
 DAY: 'DAY';
 DEALLOCATE: 'DEALLOCATE';
+DEFAULT: 'DEFAULT';
 DEFINER: 'DEFINER';
 DELETE: 'DELETE';
 DESC: 'DESC';
