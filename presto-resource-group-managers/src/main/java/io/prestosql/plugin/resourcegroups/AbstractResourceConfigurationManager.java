@@ -96,7 +96,9 @@ public abstract class AbstractResourceConfigurationManager
             validateSelectors(managerSpec.getRootGroups(), spec);
             selectors.add(new StaticSelector(
                     spec.getUserRegex(),
+                    spec.getOriginalUserRegex(),
                     spec.getUserGroupRegex(),
+                    spec.getOriginalUserGroupRegex(),
                     spec.getSourceRegex(),
                     spec.getClientTags(),
                     spec.getResourceEstimate(),
