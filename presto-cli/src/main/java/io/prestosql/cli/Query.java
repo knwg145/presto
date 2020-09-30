@@ -130,6 +130,11 @@ public class Query
         return client.getAuthorizationUser();
     }
 
+    public Optional<String> getResetAuthorizationUser()
+    {
+        return client.getResetAuthorizationUser();
+    }
+
     public boolean renderOutput(Terminal terminal, PrintStream out, PrintStream errorChannel, OutputFormat outputFormat, boolean usePager, boolean showProgress)
     {
         Thread clientThread = Thread.currentThread();

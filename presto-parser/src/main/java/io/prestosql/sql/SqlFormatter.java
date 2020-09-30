@@ -80,6 +80,7 @@ import io.prestosql.sql.tree.RenameSchema;
 import io.prestosql.sql.tree.RenameTable;
 import io.prestosql.sql.tree.RenameView;
 import io.prestosql.sql.tree.ResetSession;
+import io.prestosql.sql.tree.ResetSessionAuthorization;
 import io.prestosql.sql.tree.Revoke;
 import io.prestosql.sql.tree.RevokeRoles;
 import io.prestosql.sql.tree.Rollback;
@@ -1408,6 +1409,13 @@ public final class SqlFormatter
                 default:
                     throw new IllegalArgumentException("Unsupported type: " + type);
             }
+            return null;
+        }
+
+        @Override
+        protected Void visitResetSessionAuthorization(ResetSessionAuthorization node, Integer context)
+        {
+            builder.append("RESET SESSION AUTHORIZATION ");
             return null;
         }
 

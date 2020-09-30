@@ -138,6 +138,7 @@ import io.prestosql.sql.tree.RenameSchema;
 import io.prestosql.sql.tree.RenameTable;
 import io.prestosql.sql.tree.RenameView;
 import io.prestosql.sql.tree.ResetSession;
+import io.prestosql.sql.tree.ResetSessionAuthorization;
 import io.prestosql.sql.tree.Revoke;
 import io.prestosql.sql.tree.RevokeRoles;
 import io.prestosql.sql.tree.Rollback;
@@ -1117,6 +1118,12 @@ class AstBuilder
         else {
             throw new IllegalArgumentException("Unsupported Session Authorization User: " + context);
         }
+    }
+
+    @Override
+    public Node visitResetSessionAuthorization(SqlBaseParser.ResetSessionAuthorizationContext context)
+    {
+        return new ResetSessionAuthorization(getLocation(context));
     }
 
     @Override

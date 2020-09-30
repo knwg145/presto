@@ -368,6 +368,10 @@ public class Console
                 builder = builder.withAuthorizationUser(query.getAuthorizationUser());
             }
 
+            if (query.getResetAuthorizationUser().isPresent()) {
+                builder = builder.withAuthorizationUser(query.getAuthorizationUser());
+            }
+
             if (query.getStartedTransactionId() != null) {
                 builder = builder.withTransactionId(query.getStartedTransactionId());
             }

@@ -62,6 +62,7 @@ import static io.prestosql.client.PrestoHeaders.PRESTO_EXTRA_CREDENTIAL;
 import static io.prestosql.client.PrestoHeaders.PRESTO_LANGUAGE;
 import static io.prestosql.client.PrestoHeaders.PRESTO_PATH;
 import static io.prestosql.client.PrestoHeaders.PRESTO_PREPARED_STATEMENT;
+import static io.prestosql.client.PrestoHeaders.PRESTO_RESET_AUTHORIZATION_USER;
 import static io.prestosql.client.PrestoHeaders.PRESTO_RESOURCE_ESTIMATE;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SCHEMA;
 import static io.prestosql.client.PrestoHeaders.PRESTO_SESSION;
@@ -114,6 +115,7 @@ class StatementClientV1
     private final Duration requestTimeoutNanos;
     private final String user;
     private final AtomicReference<String> authorizationUser = new AtomicReference<>();
+    private final AtomicReference<String> resetAuthorizationUser = new AtomicReference<>();
     private final String clientCapabilities;
 
     private final AtomicReference<State> state = new AtomicReference<>(State.RUNNING);
@@ -350,6 +352,12 @@ class StatementClientV1
         return Optional.ofNullable(authorizationUser.get());
     }
 
+    @Override
+    public Optional<String> getResetAuthorizationUser()
+    {
+        return Optional.ofNullable(resetAuthorizationUser.get());
+    }
+
     private Request.Builder prepareRequest(HttpUrl url)
     {
         return new Request.Builder()
@@ -470,6 +478,9 @@ class StatementClientV1
         }
 
         authorizationUser.set(headers.get(PRESTO_SET_AUTHORIZATION_USER));
+        if (headers.get(PRESTO_RESET_AUTHORIZATION_USER) != null) {
+            resetAuthorizationUser.set(headers.get(PRESTO_RESET_AUTHORIZATION_USER));
+        }
 
         currentResults.set(results);
     }

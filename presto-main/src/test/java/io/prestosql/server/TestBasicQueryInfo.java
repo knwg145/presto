@@ -125,6 +125,7 @@ public class TestBasicQueryInfo
                         Optional.empty(),
                         false,
                         Optional.empty(),
+                        Optional.empty(),
                         "33",
                         Optional.empty(),
                         null,

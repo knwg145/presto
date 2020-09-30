@@ -66,6 +66,8 @@ public interface StatementClient
 
     Optional<String> getAuthorizationUser();
 
+    Optional<String> getResetAuthorizationUser();
+
     @Nullable
     String getStartedTransactionId();
 

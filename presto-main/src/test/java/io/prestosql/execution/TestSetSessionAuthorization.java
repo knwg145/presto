@@ -167,6 +167,24 @@ public class TestSetSessionAuthorization
         Assert.assertEquals(error.getMessage(), "Access Denied: User user cannot impersonate user user3");
     }
 
+    @Test
+    public void testResetSessionAuthorization()
+    {
+        StatementClient client;
+        client = submitQuery("RESET SESSION AUTHORIZATION", null, "user", null);
+        Assert.assertEquals(client.getResetAuthorizationUser().get(), "user");
+        client = submitQuery("SET SESSION AUTHORIZATION headlessAccount1", null, client.getResetAuthorizationUser().orElse(null), null);
+        Assert.assertEquals(client.getAuthorizationUser().get(), "headlessAccount1");
+        client = submitQuery("RESET SESSION AUTHORIZATION", client.getAuthorizationUser().orElse(null), "user", null);
+        Assert.assertEquals(client.getResetAuthorizationUser().get(), "user");
+
+        client = submitQuery("START TRANSACTION", null, "user", null);
+        String transactionId = client.getStartedTransactionId();
+        client = submitQuery("RESET SESSION AUTHORIZATION", null, "user", transactionId);
+        QueryError error = client.currentStatusInfo().getError();
+        Assert.assertEquals(error.getMessage(), "Can't reset authorization user in the middle of a transaction");
+    }
+
     private StatementClient submitQuery(String query, String authorizationUser, String user, String transactionId)
     {
         ClientSession clientSession = ClientSession.builder()

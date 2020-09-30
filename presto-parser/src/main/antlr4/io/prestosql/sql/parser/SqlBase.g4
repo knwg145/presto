@@ -124,6 +124,7 @@ statement
     | DESC qualifiedName                                               #showColumns
     | SHOW FUNCTIONS
         (LIKE pattern=string (ESCAPE escape=string)?)?                 #showFunctions
+    | RESET SESSION AUTHORIZATION                                      #resetSessionAuthorization
     | SHOW SESSION
         (LIKE pattern=string (ESCAPE escape=string)?)?                 #showSession
     | SET SESSION AUTHORIZATION authorizationUser                      #setAuthorizationUser

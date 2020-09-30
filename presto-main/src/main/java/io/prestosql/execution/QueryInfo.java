@@ -69,6 +69,7 @@ public class QueryInfo
     private final Optional<TransactionId> startedTransactionId;
     private final boolean clearTransactionId;
     private final Optional<String> authorizationUser;
+    private final Optional<String> resetAuthorizationUser;
     private final String updateType;
     private final Optional<StageInfo> outputStage;
     private final List<TableInfo> referencedTables;
@@ -106,6 +107,7 @@ public class QueryInfo
             @JsonProperty("startedTransactionId") Optional<TransactionId> startedTransactionId,
             @JsonProperty("clearTransactionId") boolean clearTransactionId,
             @JsonProperty("authorizationUser") Optional<String> authorizationUser,
+            @JsonProperty("resetAuthorizationUser") Optional<String> resetAuthorizationUser,
             @JsonProperty("updateType") String updateType,
             @JsonProperty("outputStage") Optional<StageInfo> outputStage,
             @JsonProperty("failureInfo") ExecutionFailureInfo failureInfo,
@@ -134,6 +136,7 @@ public class QueryInfo
         requireNonNull(deallocatedPreparedStatements, "deallocatedPreparedStatements is null");
         requireNonNull(startedTransactionId, "startedTransactionId is null");
         requireNonNull(authorizationUser, "authorizationUser is null");
+        requireNonNull(resetAuthorizationUser, "resetAuthorizationUser is null");
         requireNonNull(query, "query is null");
         requireNonNull(preparedQuery, "preparedQuery is null");
         requireNonNull(outputStage, "outputStage is null");
@@ -166,6 +169,7 @@ public class QueryInfo
         this.startedTransactionId = startedTransactionId;
         this.clearTransactionId = clearTransactionId;
         this.authorizationUser = authorizationUser;
+        this.resetAuthorizationUser = resetAuthorizationUser;
         this.updateType = updateType;
         this.outputStage = outputStage;
         this.failureInfo = failureInfo;
@@ -345,6 +349,12 @@ public class QueryInfo
     public Optional<String> getAuthorizationUser()
     {
         return authorizationUser;
+    }
+
+    @JsonProperty
+    public Optional<String> getResetAuthorizationUser()
+    {
+        return resetAuthorizationUser;
     }
 
     @JsonProperty
