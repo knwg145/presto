@@ -432,14 +432,4 @@ public class TestHiveDynamicPartitionPruning
         assertEquals(domainStats.getDiscreteValuesCount(), 0);
         assertEquals(domainStats.getRangeCount(), 100);
     }
-
-    private DynamicFiltersStats getDynamicFilteringStats(QueryId queryId)
-    {
-        DistributedQueryRunner runner = (DistributedQueryRunner) getQueryRunner();
-        return runner.getCoordinator()
-                .getQueryManager()
-                .getFullQueryInfo(queryId)
-                .getQueryStats()
-                .getDynamicFiltersStats();
-    }
 }

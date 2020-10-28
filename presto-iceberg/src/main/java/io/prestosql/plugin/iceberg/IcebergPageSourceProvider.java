@@ -168,7 +168,8 @@ public class IcebergPageSourceProvider
                 split.getLength(),
                 split.getFileFormat(),
                 regularColumns,
-                table.getPredicate());
+                table.getPredicate(),
+                dynamicFilter.transform(IcebergColumnHandle.class::cast));
 
         return new IcebergPageSource(icebergColumns, partitionKeys, dataPageSource, session.getTimeZoneKey());
     }
@@ -181,7 +182,8 @@ public class IcebergPageSourceProvider
             long length,
             FileFormat fileFormat,
             List<IcebergColumnHandle> dataColumns,
-            TupleDomain<IcebergColumnHandle> predicate)
+            TupleDomain<IcebergColumnHandle> predicate,
+            TupleDomain<IcebergColumnHandle> dynamicFilter)
     {
         switch (fileFormat) {
             case ORC:
@@ -212,7 +214,8 @@ public class IcebergPageSourceProvider
                                 .withLazyReadSmallRanges(getOrcLazyReadSmallRanges(session))
                                 .withNestedLazy(isOrcNestedLazy(session))
                                 .withBloomFiltersEnabled(isOrcBloomFiltersEnabled(session)),
-                        fileFormatDataSourceStats);
+                        fileFormatDataSourceStats,
+                        dynamicFilter);
             case PARQUET:
                 return createParquetPageSource(
                         hdfsEnvironment,
@@ -226,7 +229,8 @@ public class IcebergPageSourceProvider
                                 .withFailOnCorruptedStatistics(isFailOnCorruptedParquetStatistics(session))
                                 .withMaxReadBlockSize(getParquetMaxReadBlockSize(session)),
                         predicate,
-                        fileFormatDataSourceStats);
+                        fileFormatDataSourceStats,
+                        dynamicFilter);
         }
         throw new PrestoException(NOT_SUPPORTED, "File format not supported for Iceberg: " + fileFormat);
     }
@@ -240,9 +244,10 @@ public class IcebergPageSourceProvider
             long length,
             long fileSize,
             List<IcebergColumnHandle> columns,
-            TupleDomain<IcebergColumnHandle> effectivePredicate,
+            TupleDomain<IcebergColumnHandle> predicate,
             OrcReaderOptions options,
-            FileFormatDataSourceStats stats)
+            FileFormatDataSourceStats stats,
+            TupleDomain<IcebergColumnHandle> dynamicFilter)
     {
         OrcDataSource orcDataSource = null;
         try {
@@ -270,7 +275,8 @@ public class IcebergPageSourceProvider
 
             TupleDomainOrcPredicateBuilder predicateBuilder = TupleDomainOrcPredicate.builder()
                     .setBloomFiltersEnabled(options.isBloomFiltersEnabled());
-            Map<IcebergColumnHandle, Domain> effectivePredicateDomains = effectivePredicate.getDomains()
+            Map<IcebergColumnHandle, Domain> effectivePredicateDomains = predicate.intersect(dynamicFilter)
+                    .getDomains()
                     .orElseThrow(() -> new IllegalArgumentException("Effective predicate is none"));
             List<OrcColumn> fileReadColumns = new ArrayList<>(columns.size());
             List<Type> fileReadTypes = new ArrayList<>(columns.size());
@@ -350,8 +356,9 @@ public class IcebergPageSourceProvider
             long length,
             List<IcebergColumnHandle> regularColumns,
             ParquetReaderOptions options,
-            TupleDomain<IcebergColumnHandle> effectivePredicate,
-            FileFormatDataSourceStats fileFormatDataSourceStats)
+            TupleDomain<IcebergColumnHandle> predicate,
+            FileFormatDataSourceStats fileFormatDataSourceStats,
+            TupleDomain<IcebergColumnHandle> dynamicFilter)
     {
         AggregatedMemoryContext systemMemoryContext = newSimpleAggregatedMemoryContext();
 
@@ -384,7 +391,7 @@ public class IcebergPageSourceProvider
 
             MessageType requestedSchema = new MessageType(fileSchema.getName(), parquetFields.stream().filter(Objects::nonNull).collect(toImmutableList()));
             Map<List<String>, RichColumnDescriptor> descriptorsByPath = getDescriptors(fileSchema, requestedSchema);
-            TupleDomain<ColumnDescriptor> parquetTupleDomain = getParquetTupleDomain(descriptorsByPath, effectivePredicate);
+            TupleDomain<ColumnDescriptor> parquetTupleDomain = getParquetTupleDomain(descriptorsByPath, predicate, dynamicFilter);
             Predicate parquetPredicate = buildPredicate(requestedSchema, parquetTupleDomain, descriptorsByPath, UTC);
 
             List<BlockMetaData> blocks = new ArrayList<>();
@@ -450,14 +457,16 @@ public class IcebergPageSourceProvider
         }
     }
 
-    private static TupleDomain<ColumnDescriptor> getParquetTupleDomain(Map<List<String>, RichColumnDescriptor> descriptorsByPath, TupleDomain<IcebergColumnHandle> effectivePredicate)
+    private static TupleDomain<ColumnDescriptor> getParquetTupleDomain(Map<List<String>, RichColumnDescriptor> descriptorsByPath,
+            TupleDomain<IcebergColumnHandle> effectivePredicate,
+            TupleDomain<IcebergColumnHandle> dynamicFilter)
     {
         if (effectivePredicate.isNone()) {
             return TupleDomain.none();
         }
 
         ImmutableMap.Builder<ColumnDescriptor, Domain> predicate = ImmutableMap.builder();
-        effectivePredicate.getDomains().get().forEach((columnHandle, domain) -> {
+        dynamicFilter.intersect(effectivePredicate).getDomains().get().forEach((columnHandle, domain) -> {
             String baseType = columnHandle.getType().getTypeSignature().getBase();
             // skip looking up predicates for complex types as Parquet only stores stats for primitives
             if (!baseType.equals(StandardTypes.MAP) && !baseType.equals(StandardTypes.ARRAY) && !baseType.equals(StandardTypes.ROW)) {

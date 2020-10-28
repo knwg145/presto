@@ -29,6 +29,7 @@ import io.prestosql.execution.TaskManagerConfig;
 import io.prestosql.execution.warnings.WarningCollector;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.operator.OperatorStats;
+import io.prestosql.server.DynamicFilterService;
 import io.prestosql.spi.QueryId;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeOperators;
@@ -461,5 +462,15 @@ public abstract class AbstractTestQueryFramework
     protected final <T extends AutoCloseable> T closeAfterClass(T resource)
     {
         return afterClassCloser.register(resource);
+    }
+
+    protected DynamicFilterService.DynamicFiltersStats getDynamicFilteringStats(QueryId queryId)
+    {
+        DistributedQueryRunner runner = (DistributedQueryRunner) getQueryRunner();
+        return runner.getCoordinator()
+                .getQueryManager()
+                .getFullQueryInfo(queryId)
+                .getQueryStats()
+                .getDynamicFiltersStats();
     }
 }
